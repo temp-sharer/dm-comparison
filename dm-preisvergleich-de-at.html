@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>dm-Preise DE vs. AT</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: one reading column (max 1120px). Summary first (finding + matrix), then a sticky filter bar
+   that scopes everything below it: KPIs, dot plot, extremes, product table, method. */
+:root {
+  --bg: #f4f5f6;
+  --surface: #ffffff;
+  --surface-2: #f8f9fa;
+  --ink: #15171a;
+  --ink-2: #4d535b;
+  --muted: #80858d;
+  --line: #e1e4e8;
+  --grid: #e9ebee;
+  --up: #e34948;        /* AT teurer (diverging warm pole) */
+  --down: #2a78d6;      /* AT günstiger (diverging cool pole) */
+  --mid: #efeeea;       /* diverging neutral midpoint */
+  --same: #9b9a93;      /* gleicher Preis */
+  --sel: #15171a;
+  --sel-ink: #ffffff;
+  --focus: #6250d6;
+  --shadow: 0 1px 2px rgba(15, 17, 20, .06), 0 4px 16px rgba(15, 17, 20, .04);
+  --font-display: "Space Grotesk", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1012; --surface: #18191b; --surface-2: #1d1f21; --ink: #eeeef0; --ink-2: #b9bcc2;
+    --muted: #8a8f97; --line: #2c2f33; --grid: #25282b; --up: #e66767; --down: #3987e5; --mid: #2f3032;
+    --same: #8c8b85; --sel: #eeeef0; --sel-ink: #111214; --focus: #9085e9;
+    --shadow: 0 1px 2px rgba(0,0,0,.4); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1012; --surface: #18191b; --surface-2: #1d1f21; --ink: #eeeef0; --ink-2: #b9bcc2;
+  --muted: #8a8f97; --line: #2c2f33; --grid: #25282b; --up: #e66767; --down: #3987e5; --mid: #2f3032;
+  --same: #8c8b85; --sel: #eeeef0; --sel-ink: #111214; --focus: #9085e9;
+  --shadow: 0 1px 2px rgba(0,0,0,.4); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 400 15px/1.55 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -.01em; }
+h1 { font-size: clamp(28px, 4.4vw, 44px); line-height: 1.08; font-weight: 700; }
+h2 { font-size: 21px; line-height: 1.25; font-weight: 600; }
+h3 { font-size: 15px; font-weight: 600; }
+p { margin: 0; }
+a { color: inherit; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.lede { font-size: 17px; color: var(--ink-2); max-width: 68ch; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.num { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+
+header.top { padding-top: 40px; display: flex; flex-direction: column; gap: 14px; }
+.flags { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.cc { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 22px; padding: 0 6px;
+  border-radius: 5px; font: 600 11px/1 var(--font-display); letter-spacing: .06em; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); }
+.finding { font-family: var(--font-display); font-size: clamp(19px, 2.4vw, 24px); line-height: 1.35; font-weight: 500; max-width: 60ch; }
+.finding b { font-weight: 700; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); padding: 20px; min-width: 0; }
+.section-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px 24px; flex-wrap: wrap; margin-bottom: 14px; }
+.section-head p { max-width: 62ch; }
+
+/* matrix */
+.matrix-wrap { overflow-x: auto; }
+table.matrix { border-collapse: separate; border-spacing: 4px; width: 100%; min-width: 520px; }
+table.matrix th { font: 600 12px/1.3 var(--font-body); color: var(--ink-2); text-align: left; padding: 6px 8px; letter-spacing: .02em; }
+table.matrix thead th { text-align: center; }
+table.matrix td { padding: 0; }
+.cell { width: 100%; border: 0; border-radius: 7px; padding: 12px 8px 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font: inherit; color: var(--ink); background: var(--mid); transition: transform .12s ease, box-shadow .12s ease; }
+.cell:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px var(--line), var(--shadow); }
+.cell .v { font: 600 18px/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.cell .n { font-size: 11px; opacity: .78; }
+.cell.on { box-shadow: 0 0 0 2px var(--ink); }
+.cell.total .v { font-weight: 700; }
+.scale { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--ink-2); flex-wrap: wrap; }
+.scale .bar { width: 180px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--down), var(--mid), var(--up)); }
+
+/* controls */
+.controls { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in oklab, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 12px 0; border-bottom: 1px solid var(--line);
+  display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; color: var(--ink-2); font: 500 13px/1 var(--font-body); padding: 8px 12px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.seg button:hover { background: var(--surface-2); color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--sel); color: var(--sel-ink); }
+.ctl-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 600; margin-right: 6px; }
+.ctl { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+input[type="search"] { font: 400 14px var(--font-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; width: 220px; max-width: 100%; }
+.scope-note { font-size: 13px; color: var(--ink-2); }
+
+/* KPIs */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.kpi { display: flex; flex-direction: column; gap: 6px; }
+.kpi .label { font-size: 13px; color: var(--ink-2); }
+.kpi .value { font: 600 30px/1.1 var(--font-display); }
+.kpi .sub { font-size: 13px; color: var(--muted); }
+.split { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px; background: var(--surface); margin-top: 6px; }
+.split span { display: block; height: 100%; }
+.split span:first-child { border-radius: 4px 0 0 4px; } .split span:last-child { border-radius: 0 4px 4px 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ink-2); align-items: center; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.sw.sq { border-radius: 2px; }
+.sw.ring { background: transparent !important; border: 2px solid var(--ink-2); }
+
+/* dot plot */
+#plot { width: 100%; display: block; overflow: visible; }
+#plot text { font-family: var(--font-body); }
+.dot { cursor: pointer; }
+.dot:focus { outline: none; }
+.dot:focus-visible .mark, .dot.hl .mark { stroke: var(--ink); stroke-width: 2.5; }
+
+/* tooltip */
+#tip { position: fixed; z-index: 20; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 10px 12px; font-size: 13px; max-width: 290px; display: none; }
+#tip .t-v { font: 600 20px/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+#tip .t-n { color: var(--ink); font-weight: 500; margin-top: 4px; }
+#tip .t-s { color: var(--muted); font-size: 12px; }
+#tip .t-row { display: flex; justify-content: space-between; gap: 16px; font-variant-numeric: tabular-nums; margin-top: 4px; }
+
+/* extremes */
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.ext { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ext li { display: grid; grid-template-columns: minmax(0, 1fr) 72px; gap: 4px 12px; align-items: center; cursor: pointer; }
+.ext .pn { font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
+.ext .pn b { font-weight: 600; }
+.ext .pv { text-align: right; font: 600 15px var(--font-display); font-variant-numeric: tabular-nums; }
+.ext .pb { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--surface-2); position: relative; }
+.ext .pb i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 0 3px 3px 0; }
+.ext .pp { grid-column: 1 / -1; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: -4px; }
+
+/* table */
+.tbl-wrap { overflow-x: auto; margin: 0 -20px -20px; border-top: 1px solid var(--line); }
+table.prod { border-collapse: collapse; width: 100%; min-width: 860px; font-size: 13.5px; }
+table.prod th { position: sticky; top: 0; background: var(--surface-2); text-align: left; font-weight: 600; font-size: 12px; color: var(--ink-2);
+  padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.prod th button { all: unset; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+table.prod th button:focus-visible { outline: 2px solid var(--focus); border-radius: 3px; }
+table.prod th.r, table.prod td.r { text-align: right; }
+table.prod td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.prod tr.hl td { background: color-mix(in oklab, var(--focus) 10%, var(--surface)); }
+table.prod td .b { font-weight: 600; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; border: 1px solid var(--line); color: var(--ink-2); }
+.delta { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.delta i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.lk { white-space: nowrap; font-size: 12.5px; }
+.lk a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--line); }
+.lk a:hover { color: var(--ink); border-color: var(--ink); }
+.empty { padding: 24px; text-align: center; color: var(--muted); }
+
+.method { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px 32px; font-size: 14px; color: var(--ink-2); }
+.method h3 { color: var(--ink); margin-bottom: 4px; }
+.method ul { margin: 6px 0 0; padding-left: 18px; }
+.method li { margin-bottom: 4px; }
+footer { font-size: 12px; color: var(--muted); }
+@media (max-width: 560px) {
+  .card { padding: 16px; }
+  .tbl-wrap { margin: 0 -16px -16px; }
+  .controls { gap: 8px 12px; position: static; backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--bg); }
+  input[type="search"] { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="flags"><span class="eyebrow">Preisvergleich</span><span class="cc">DE</span><span class="muted small">dm.de</span><span class="muted">vs.</span><span class="cc">AT</span><span class="muted small">dm.at</span></div>
+    <h1>Was kostet derselbe Einkauf bei dm in Österreich?</h1>
+    <p class="finding" id="finding"></p>
+    <p class="lede" id="lede"></p>
+  </header>
+
+  <section class="card" aria-labelledby="h-matrix">
+    <div class="section-head">
+      <div>
+        <h2 id="h-matrix">Überblick nach Kategorie</h2>
+        <p class="muted small" id="matrix-sub">Preisunterschied Österreich gegenüber Deutschland. Klick auf ein Feld filtert den ganzen Bericht.</p>
+      </div>
+      <div class="ctl" role="group" aria-label="Kennzahl">
+        <span class="ctl-label">Kennzahl</span>
+        <div class="seg" id="seg-metric">
+          <button type="button" id="m-avg" data-v="avg" aria-pressed="true">Ø je Produkt</button>
+          <button type="button" id="m-basket" data-v="basket" aria-pressed="false">Warenkorb</button>
+        </div>
+      </div>
+    </div>
+    <div class="matrix-wrap"><table class="matrix" id="matrix"></table></div>
+    <div class="scale" style="margin-top:12px"><span>AT günstiger</span><span class="bar" aria-hidden="true"></span><span>AT teurer</span><span class="muted" id="scale-max"></span></div>
+  </section>
+
+  <div class="controls" id="controls">
+    <div class="ctl" role="group" aria-label="Sortiment">
+      <span class="ctl-label">Sortiment</span>
+      <div class="seg" id="seg-scope">
+        <button type="button" id="s-all" data-v="all" aria-pressed="true">Allgemein</button>
+        <button type="button" id="s-marke" data-v="Marke" aria-pressed="false">Marken-Produkte</button>
+        <button type="button" id="s-eigen" data-v="Eigenmarke" aria-pressed="false">Eigenmarken</button>
+      </div>
+    </div>
+    <div class="ctl" role="group" aria-label="Produktkategorie">
+      <span class="ctl-label">Kategorie</span>
+      <div class="seg" id="seg-cat">
+        <button type="button" id="c-all" data-v="all" aria-pressed="true">Alle</button>
+        <button type="button" id="c-rein" data-v="Reinigungsmittel" aria-pressed="false">Reinigungsmittel</button>
+        <button type="button" id="c-hyg" data-v="Hygieneprodukte" aria-pressed="false">Hygieneprodukte</button>
+        <button type="button" id="c-kos" data-v="Kosmetik" aria-pressed="false">Kosmetik</button>
+        <button type="button" id="c-mu" data-v="Make-Up" aria-pressed="false">Make-Up</button>
+      </div>
+    </div>
+    <div class="ctl" role="group" aria-label="Mehrwertsteuer">
+      <span class="ctl-label">Preise</span>
+      <div class="seg" id="seg-vat">
+        <button type="button" id="v-brutto" data-v="brutto" aria-pressed="true">inkl. MwSt.</button>
+        <button type="button" id="v-netto" data-v="netto" aria-pressed="false">ohne MwSt.</button>
+      </div>
+    </div>
+    <input type="search" id="q" placeholder="Produkt oder Marke suchen" aria-label="Produkt oder Marke suchen">
+  </div>
+
+  <section aria-labelledby="h-kpi" style="display:flex;flex-direction:column;gap:12px">
+    <div class="section-head" style="margin:0">
+      <h2 id="h-kpi">Auswahl: <span id="scope-title"></span></h2>
+      <span class="scope-note" id="scope-note"></span>
+    </div>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-plot">
+    <div class="section-head">
+      <div>
+        <h2 id="h-plot">Jedes Produkt einzeln</h2>
+        <p class="muted small">Preisunterschied AT gegenüber DE in Prozent. Ein Punkt je Produkt; Hover oder Tab zeigt Details, Klick springt zur Tabellenzeile.</p>
+      </div>
+      <div class="legend" id="plot-legend"></div>
+    </div>
+    <div id="plot-box"><svg id="plot" role="img" aria-labelledby="h-plot"></svg></div>
+  </section>
+
+  <section class="two" aria-label="Größte Unterschiede">
+    <div class="card"><h3>In Österreich am deutlichsten teurer</h3><ol class="ext" id="ext-up"></ol></div>
+    <div class="card"><h3 id="ext-down-h">In Österreich am deutlichsten günstiger</h3><ol class="ext" id="ext-down"></ol></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-tbl">
+    <div class="section-head">
+      <div>
+        <h2 id="h-tbl">Alle Produkte</h2>
+        <p class="muted small"><span id="tbl-count"></span> Spaltenköpfe sortieren die Tabelle.</p>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table class="prod" id="tbl"></table></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-method">
+    <h2 id="h-method" style="margin-bottom:14px">Methode und Hinweise</h2>
+    <div class="method" id="method"></div>
+  </section>
+  <footer id="foot"></footer>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const DATA = [{"id": 1, "cat": "Hygieneprodukte", "sub": "Zahnpasta", "type": "Eigenmarke", "brand": "Dontodent", "name": "Zahnpasta Complete Care & Protect", "qty": "75 ml", "match": "gtin", "note": "", "de": {"name": "Zahnpasta Complete Care & Protect", "price": 1.95, "regular_price": null, "promo": false, "gtin": "4070765004090", "url": "https://www.dm.de/p/d/3126805/dontodent-zahnpasta-complete-care-und-protect"}, "at": {"name": "Zahnpasta Complete Care & Protect", "price": 2.15, "regular_price": null, "promo": false, "gtin": "4070765004090", "url": "https://www.dm.at/p/d/3126805/dontodent-zahnpasta-complete-care-und-protect"}}, {"id": 2, "cat": "Hygieneprodukte", "sub": "Zahnbürste", "type": "Eigenmarke", "brand": "Dontodent", "name": "Zahnbürste Sensitive super soft", "qty": "2 St", "match": "gtin", "note": "", "de": {"name": "Zahnbürste Sensitive super soft", "price": 1.45, "regular_price": null, "promo": false, "gtin": "4070765006070", "url": "https://www.dm.de/p/d/3038049/dontodent-zahnbuerste-sensitive-super-soft"}, "at": {"name": "Zahnbürste Sensitive super soft", "price": 1.65, "regular_price": null, "promo": false, "gtin": "4070765006070", "url": "https://www.dm.at/p/d/3038049/dontodent-zahnbuerste-sensitive-super-soft"}}, {"id": 3, "cat": "Hygieneprodukte", "sub": "Zahnseide", "type": "Eigenmarke", "brand": "Dontodent", "name": "Zahnseidesticks ungewachst", "qty": "40 St", "match": "gtin", "note": "", "de": {"name": "Zahnseidesticks ungewachst", "price": 0.75, "regular_price": null, "promo": false, "gtin": "4070765006902", "url": "https://www.dm.de/p/d/1601910/dontodent-zahnseidesticks-ungewachst"}, "at": {"name": "Zahnseidesticks ungewachst", "price": 1.15, "regular_price": null, "promo": false, "gtin": "4070765006902", "url": "https://www.dm.at/p/d/1601910/dontodent-zahnseidesticks-ungewachst"}}, {"id": 4, "cat": "Hygieneprodukte", "sub": "Mundspülung", "type": "Eigenmarke", "brand": "Dontodent", "name": "Mundspülung Zahnfleischpflege 6-fach Schutz", "qty": "500 ml", "match": "gtin", "note": "", "de": {"name": "Mundspülung Zahnfleischpflege 6-fach Schutz", "price": 0.85, "regular_price": null, "promo": false, "gtin": "4070765007725", "url": "https://www.dm.de/p/d/1458920/dontodent-mundspuelung-zahnfleischpflege-6-fach-schutz"}, "at": {"name": "Mundspülung Zahnfleischpflege 6-fach Schutz", "price": 0.95, "regular_price": null, "promo": false, "gtin": "4070765007725", "url": "https://www.dm.at/p/d/1458920/dontodent-mundspuelung-zahnfleischpflege-6-fach-schutz"}}, {"id": 5, "cat": "Hygieneprodukte", "sub": "Duschgel", "type": "Eigenmarke", "brand": "Balea", "name": "Cremedusche Milch & Honig", "qty": "300 ml", "match": "gtin", "note": "", "de": {"name": "Cremedusche Milch & Honig", "price": 0.55, "regular_price": null, "promo": false, "gtin": "4066447965629", "url": "https://www.dm.de/p/d/1239183/balea-cremedusche-milch-und-honig"}, "at": {"name": "Cremedusche Milch & Honig", "price": 0.75, "regular_price": null, "promo": false, "gtin": "4066447965629", "url": "https://www.dm.at/p/d/1239183/balea-cremedusche-milch-und-honig"}}, {"id": 6, "cat": "Hygieneprodukte", "sub": "Flüssigseife", "type": "Eigenmarke", "brand": "Balea", "name": "Cremeseife Milch & Honig", "qty": "500 ml", "match": "gtin", "note": "", "de": {"name": "Cremeseife Milch & Honig", "price": 0.65, "regular_price": null, "promo": false, "gtin": "4066447983838", "url": "https://www.dm.de/p/d/1103595/balea-cremeseife-milch-und-honig"}, "at": {"name": "Cremeseife Milch & Honig", "price": 0.85, "regular_price": null, "promo": false, "gtin": "4066447983838", "url": "https://www.dm.at/p/d/1103595/balea-cremeseife-milch-und-honig"}}, {"id": 7, "cat": "Hygieneprodukte", "sub": "Deodorant", "type": "Eigenmarke", "brand": "Balea", "name": "Antitranspirant Deospray Extra Dry", "qty": "200 ml", "match": "gtin", "note": "", "de": {"name": "Antitranspirant Deospray Extra Dry", "price": 0.75, "regular_price": null, "promo": false, "gtin": "4066447888683", "url": "https://www.dm.de/p/d/1693979/balea-antitranspirant-deospray-extra-dry"}, "at": {"name": "Antitranspirant Deospray Extra Dry", "price": 1.15, "regular_price": null, "promo": false, "gtin": "4066447888683", "url": "https://www.dm.at/p/d/1693979/balea-antitranspirant-deospray-extra-dry"}}, {"id": 8, "cat": "Hygieneprodukte", "sub": "Shampoo", "type": "Eigenmarke", "brand": "Balea med", "name": "Shampoo Ultra Sensitive", "qty": "250 ml", "match": "gtin", "note": "Balea med is a Balea sub-line (dm brand).", "de": {"name": "Shampoo Ultra Sensitive", "price": 1.75, "regular_price": null, "promo": false, "gtin": "4066447966008", "url": "https://www.dm.de/p/d/1569035/balea-med-shampoo-ultra-sensitive"}, "at": {"name": "Shampoo Ultra Sensitiv", "price": 2.65, "regular_price": null, "promo": false, "gtin": "4066447966008", "url": "https://www.dm.at/p/d/1569035/balea-med-shampoo-ultra-sensitiv"}}, {"id": 9, "cat": "Hygieneprodukte", "sub": "Rasiergel", "type": "Eigenmarke", "brand": "Balea MEN", "name": "Rasiergel Sensitive", "qty": "200 ml", "match": "gtin", "note": "", "de": {"name": "Rasiergel Sensitive", "price": 1.35, "regular_price": null, "promo": false, "gtin": "4070765015423", "url": "https://www.dm.de/p/d/1608808/balea-men-rasiergel-sensitive"}, "at": {"name": "Rasiergel Sensitive", "price": 1.35, "regular_price": null, "promo": false, "gtin": "4070765015423", "url": "https://www.dm.at/p/d/1608808/balea-men-rasiergel-sensitive"}}, {"id": 10, "cat": "Hygieneprodukte", "sub": "Binden", "type": "Eigenmarke", "brand": "Jessa", "name": "Ultra-Binden Skin Comfort Normal", "qty": "16 St", "match": "gtin", "note": "", "de": {"name": "Ultra-Binden Skin Comfort Normal", "price": 0.85, "regular_price": null, "promo": false, "gtin": "4066447966282", "url": "https://www.dm.de/p/d/1568716/jessa-ultra-binden-skin-comfort-normal"}, "at": {"name": "Ultra-Binden Skin Comfort Normal mit Flügel", "price": 0.85, "regular_price": null, "promo": false, "gtin": "4066447966282", "url": "https://www.dm.at/p/d/1568716/jessa-ultra-binden-skin-comfort-normal-mit-fluegel"}}, {"id": 11, "cat": "Hygieneprodukte", "sub": "Slipeinlagen", "type": "Eigenmarke", "brand": "Jessa", "name": "Slipeinlagen Flexibel Normal", "qty": "55 St", "match": "gtin", "note": "", "de": {"name": "Slipeinlagen Flexibel Normal", "price": 1.25, "regular_price": null, "promo": false, "gtin": "4066447946260", "url": "https://www.dm.de/p/d/1602848/jessa-slipeinlagen-flexibel-normal"}, "at": {"name": "Slipeinlagen Flexibel Normal", "price": 1.05, "regular_price": null, "promo": false, "gtin": "4066447946260", "url": "https://www.dm.at/p/d/1602848/jessa-slipeinlagen-flexibel-normal"}}, {"id": 12, "cat": "Hygieneprodukte", "sub": "Tampons", "type": "Eigenmarke", "brand": "Jessa", "name": "Tampons Normal mit Applikator", "qty": "16 St", "match": "gtin", "note": "", "de": {"name": "Tampons Normal mit Applikator", "price": 2.25, "regular_price": null, "promo": false, "gtin": "4066447946208", "url": "https://www.dm.de/p/d/1625421/jessa-tampons-normal-mit-applikator"}, "at": {"name": "Tampons Normal mit Applikator", "price": 2.65, "regular_price": null, "promo": false, "gtin": "4066447946208", "url": "https://www.dm.at/p/d/1625421/jessa-tampons-normal-mit-applikator"}}, {"id": 13, "cat": "Hygieneprodukte", "sub": "Intimpflege", "type": "Eigenmarke", "brand": "Jessa", "name": "Intimpflege Waschlotion Sanft & Frisch", "qty": "300 ml", "match": "gtin", "note": "", "de": {"name": "Intimpflege Waschlotion Sanft & Frisch", "price": 1.95, "regular_price": null, "promo": false, "gtin": "4067796315295", "url": "https://www.dm.de/p/d/1127876/jessa-intimpflege-waschlotion-sanft-und-frisch"}, "at": {"name": "Intimpflege Waschlotion Sanft & Frisch", "price": 1.95, "regular_price": null, "promo": false, "gtin": "4067796315295", "url": "https://www.dm.at/p/d/1127876/jessa-intimpflege-waschlotion-sanft-und-frisch"}}, {"id": 14, "cat": "Hygieneprodukte", "sub": "Taschentücher", "type": "Eigenmarke", "brand": "Soft&Sicher", "name": "Taschentücher Recycling 4-lagig (15x10 St)", "qty": "15x10 St (150 Tücher)", "match": "gtin", "note": "Soft&Sicher tiles carry the 'Marke von dm' badge.", "de": {"name": "Taschentücher Recycling 4-lagig (15x10 St)", "price": 1.35, "regular_price": null, "promo": false, "gtin": "4066447484663", "url": "https://www.dm.de/p/d/1242242/soft-und-sicher-taschentuecher-recycling-4-lagig-15x10-st"}, "at": {"name": "Taschentücher Recycling 4-lagig", "price": 1.65, "regular_price": null, "promo": false, "gtin": "4066447484663", "url": "https://www.dm.at/p/d/1242242/soft-und-sicher-taschentuecher-recycling-4-lagig"}}, {"id": 15, "cat": "Hygieneprodukte", "sub": "Zahnpasta", "type": "Marke", "brand": "elmex", "name": "Zahnpasta Kariesschutz", "qty": "75 ml", "match": "name+menge", "note": "Different GTINs (DE/AT production), same dm article no. (DAN) and identical name/size.", "de": {"name": "Zahnpasta Kariesschutz", "price": 4.45, "regular_price": null, "promo": false, "gtin": "4007965015007", "url": "https://www.dm.de/p/d/1006511/elmex-zahnpasta-kariesschutz"}, "at": {"name": "Zahnpasta Kariesschutz", "price": 3.45, "regular_price": null, "promo": false, "gtin": "7610108024513", "url": "https://www.dm.at/p/d/1006511/elmex-zahnpasta-kariesschutz"}}, {"id": 16, "cat": "Hygieneprodukte", "sub": "Mundspülung", "type": "Marke", "brand": "Listerine", "name": "Mundspülung Cool Mint", "qty": "500 ml", "match": "gtin", "note": "", "de": {"name": "Mundspülung Cool Mint", "price": 3.95, "regular_price": null, "promo": false, "gtin": "3574661731025", "url": "https://www.dm.de/p/d/1692076/listerine-mundspuelung-cool-mint"}, "at": {"name": "Mundspülung Cool Mint", "price": 4.25, "regular_price": null, "promo": false, "gtin": "3574661731025", "url": "https://www.dm.at/p/d/1692076/listerine-mundspuelung-cool-mint"}}, {"id": 17, "cat": "Hygieneprodukte", "sub": "Zahnbürste", "type": "Marke", "brand": "Oral-B", "name": "Zahnbürste Classic Care mittel", "qty": "3 St", "match": "gtin", "note": "", "de": {"name": "Zahnbürste Classic Care mittel", "price": 1.95, "regular_price": null, "promo": false, "gtin": "8700216106542", "url": "https://www.dm.de/p/d/1701657/oral-b-zahnbuerste-classic-care-mittel"}, "at": {"name": "Zahnbürste 1-2-3 Classic Care mittel sortiert", "price": 1.95, "regular_price": null, "promo": false, "gtin": "8700216106542", "url": "https://www.dm.at/p/d/1701657/oral-b-zahnbuerste-1-2-3-classic-care-mittel-sortiert"}}, {"id": 18, "cat": "Hygieneprodukte", "sub": "Zahnseide", "type": "Marke", "brand": "Oral-B", "name": "Zahnseide Essentialfloss gewachst", "qty": "50 m", "match": "gtin", "note": "", "de": {"name": "Zahnseide Essentialfloss gewachst", "price": 2.45, "regular_price": null, "promo": false, "gtin": "8006530045797", "url": "https://www.dm.de/p/d/3117820/oral-b-zahnseide-essentialfloss-gewachst"}, "at": {"name": "Zahnseide Essentialfloss gewachst", "price": 2.95, "regular_price": null, "promo": false, "gtin": "8006530045797", "url": "https://www.dm.at/p/d/3117820/oral-b-zahnseide-essentialfloss-gewachst"}}, {"id": 19, "cat": "Hygieneprodukte", "sub": "Duschgel", "type": "Marke", "brand": "NIVEA", "name": "Pflegedusche Creme Soft & Almond Oil", "qty": "250 ml", "match": "gtin", "note": "", "de": {"name": "Pflegedusche Creme Soft & Almond Oil", "price": 1.95, "regular_price": null, "promo": false, "gtin": "4006000218892", "url": "https://www.dm.de/p/d/1567126/nivea-pflegedusche-creme-soft-und-almond-oil"}, "at": {"name": "Pflegedusche Creme Soft und Mandelöl", "price": 2.25, "regular_price": null, "promo": false, "gtin": "4006000218892", "url": "https://www.dm.at/p/d/1567126/nivea-pflegedusche-creme-soft-und-mandeloel"}}, {"id": 20, "cat": "Hygieneprodukte", "sub": "Flüssigseife", "type": "Marke", "brand": "Jean&Len", "name": "Flüssigseife rosemary & ginger, Rosmarin & Ingwer, Nachfüllpack", "qty": "500 ml", "match": "gtin", "note": "DE states 0,5 l, AT 500 ml (same size). No common Dove/Palmolive/Sagrotan liquid soap found in both shops in identical size.", "de": {"name": "Flüssigseife rosemary & ginger, Rosmarin & Ingwer, Nachfüllpack", "price": 6.95, "regular_price": null, "promo": false, "gtin": "4260702187003", "url": "https://www.dm.de/p/d/1679655/jean-und-len-fluessigseife-rosemary-und-ginger-rosmarin-und-ingwer-nachfuellpack"}, "at": {"name": "Flüssigseife Rosemary & Ginger Nachfüllpack", "price": 6.95, "regular_price": null, "promo": false, "gtin": "4260702187003", "url": "https://www.dm.at/p/d/1679655/jean-und-len-fluessigseife-rosemary-und-ginger-nachfuellpack"}}, {"id": 21, "cat": "Hygieneprodukte", "sub": "Deodorant", "type": "Marke", "brand": "Rexona", "name": "Antitranspirant Deospray Nonstop Protection Invisible Aqua", "qty": "150 ml", "match": "gtin", "note": "", "de": {"name": "Antitranspirant Deospray Nonstop Protection Invisible Aqua", "price": 2.95, "regular_price": null, "promo": false, "gtin": "8720181438660", "url": "https://www.dm.de/p/d/1412547/rexona-antitranspirant-deospray-nonstop-protection-invisible-aqua"}, "at": {"name": "Antitranspirant Deospray Nonstop Protection Invisible Aqua", "price": 3.95, "regular_price": null, "promo": false, "gtin": "8720181438660", "url": "https://www.dm.at/p/d/1412547/rexona-antitranspirant-deospray-nonstop-protection-invisible-aqua"}}, {"id": 22, "cat": "Hygieneprodukte", "sub": "Shampoo", "type": "Marke", "brand": "Schwarzkopf GLISS", "name": "Shampoo Liquid Silk", "qty": "250 ml", "match": "gtin", "note": "", "de": {"name": "Shampoo Liquid Silk", "price": 2.95, "regular_price": null, "promo": false, "gtin": "4015100813111", "url": "https://www.dm.de/p/d/1430803/schwarzkopf-gliss-shampoo-liquid-silk"}, "at": {"name": "Shampoo Liquid Silk", "price": 3.45, "regular_price": null, "promo": false, "gtin": "4015100813111", "url": "https://www.dm.at/p/d/1430803/schwarzkopf-gliss-shampoo-liquid-silk"}}, {"id": 23, "cat": "Hygieneprodukte", "sub": "Rasiergel", "type": "Marke", "brand": "Gillette", "name": "Rasiergel, Sensitive Basis", "qty": "200 ml", "match": "gtin", "note": "Product name wording differs (Sensitive Basis vs Sensitive Original Scent); identical GTIN and DAN.", "de": {"name": "Rasiergel, Sensitive Basis", "price": 2.65, "regular_price": null, "promo": false, "gtin": "7702018621255", "url": "https://www.dm.de/p/d/1013180/gillette-rasiergel-sensitive-basis"}, "at": {"name": "Rasiergel Sensitive Original Scent", "price": 2.75, "regular_price": null, "promo": false, "gtin": "7702018621255", "url": "https://www.dm.at/p/d/1013180/gillette-rasiergel-sensitive-original-scent"}}, {"id": 24, "cat": "Hygieneprodukte", "sub": "Tampons", "type": "Marke", "brand": "o.b.", "name": "Tampons Original Normal", "qty": "64 St", "match": "gtin", "note": "", "de": {"name": "Tampons Original Normal", "price": 4.95, "regular_price": null, "promo": false, "gtin": "3574661857817", "url": "https://www.dm.de/p/d/3133264/o-b-tampons-original-normal"}, "at": {"name": "Tampons Original Normal", "price": 5.65, "regular_price": null, "promo": false, "gtin": "3574661857817", "url": "https://www.dm.at/p/d/3133264/o-b-tampons-original-normal"}}, {"id": 25, "cat": "Hygieneprodukte", "sub": "Binden", "type": "Marke", "brand": "always", "name": "Maxi-Binden Long mit Flügeln", "qty": "14 St", "match": "gtin", "note": "", "de": {"name": "Maxi-Binden Long mit Flügeln", "price": 1.95, "regular_price": null, "promo": false, "gtin": "8006540460016", "url": "https://www.dm.de/p/d/1626829/always-maxi-binden-long-mit-fluegeln"}, "at": {"name": "Maxi-Binden mit Flügeln Maxi Long", "price": 1.95, "regular_price": null, "promo": false, "gtin": "8006540460016", "url": "https://www.dm.at/p/d/1626829/always-maxi-binden-mit-fluegeln-maxi-long"}}, {"id": 26, "cat": "Hygieneprodukte", "sub": "Slipeinlagen", "type": "Marke", "brand": "always", "name": "Slipeinlagen Daily Fresh Normal ohne Duft, Big Pack", "qty": "56 St", "match": "gtin", "note": "Big Pack is the standard single retail pack (not a multipack bundle); identical in both shops.", "de": {"name": "Slipeinlagen Daily Fresh Normal ohne Duft, Big Pack", "price": 2.95, "regular_price": null, "promo": false, "gtin": "8006540689110", "url": "https://www.dm.de/p/d/1678818/always-slipeinlagen-daily-fresh-normal-ohne-duft-big-pack"}, "at": {"name": "Slipeinlagen Daily Fresh & Protect Normal ohne Duft Big Pack", "price": 2.75, "regular_price": null, "promo": false, "gtin": "8006540689110", "url": "https://www.dm.at/p/d/1678818/always-slipeinlagen-daily-fresh-und-protect-normal-ohne-duft-big-pack"}}, {"id": 27, "cat": "Hygieneprodukte", "sub": "Taschentücher", "type": "Marke", "brand": "Tempo", "name": "Taschentücher (15x10 St)", "qty": "15x10 St (150 Tücher)", "match": "gtin", "note": "DE counts 150 tissues, AT counts 15 packs; Grundpreis in both = 150 tissues, identical GTIN and DAN.", "de": {"name": "Taschentücher (15x10 St)", "price": 2.25, "regular_price": null, "promo": false, "gtin": "7322540786514", "url": "https://www.dm.de/p/d/1436067/tempo-taschentuecher-15x10-st"}, "at": {"name": "Taschentücher 4-lagig", "price": 3.35, "regular_price": null, "promo": false, "gtin": "7322540786514", "url": "https://www.dm.at/p/d/1436067/tempo-taschentuecher-4-lagig"}}, {"id": 28, "cat": "Hygieneprodukte", "sub": "Intimpflege", "type": "Marke", "brand": "NIVEA", "name": "Intimpflege Waschlotion Intimo Sensitive", "qty": "250 ml", "match": "gtin", "note": "", "de": {"name": "Intimpflege Waschlotion Intimo Sensitive", "price": 3.25, "regular_price": null, "promo": false, "gtin": "4006000220710", "url": "https://www.dm.de/p/d/1638017/nivea-intimpflege-waschlotion-intimo-sensitive"}, "at": {"name": "Intimpflege Waschlotion Intimo Sensitive", "price": 4.95, "regular_price": null, "promo": false, "gtin": "4006000220710", "url": "https://www.dm.at/p/d/1638017/nivea-intimpflege-waschlotion-intimo-sensitive"}}, {"id": 29, "cat": "Reinigungsmittel", "sub": "Hand-Geschirrspülmittel", "type": "Eigenmarke", "brand": "Denkmit", "name": "Spülmittel Frühlingsfrische", "qty": "1 l", "match": "gtin", "note": "", "de": {"name": "Spülmittel Frühlingsfrische, 1 l", "price": 0.85, "regular_price": null, "promo": false, "gtin": "4070765058260", "url": "https://www.dm.de/p/d/3158236/denkmit-spuelmittel-fruehlingsfrische"}, "at": {"name": "Spülmittel Frühlings-Frische, 1 l", "price": 1.15, "regular_price": null, "promo": false, "gtin": "4070765058260", "url": "https://www.dm.at/p/d/3158236/denkmit-spuelmittel-fruehlings-frische"}}, {"id": 30, "cat": "Reinigungsmittel", "sub": "Spülmaschinen-Tabs", "type": "Eigenmarke", "brand": "Denkmit", "name": "Geschirrspülmittel-Tabs All in One", "qty": "30 St", "match": "gtin", "note": "AT lists pack as 577,5 g with Grundpreis 30 St; same GTIN and DAN.", "de": {"name": "Geschirrspülmittel-Tabs All in One, 30 St", "price": 2.95, "regular_price": null, "promo": false, "gtin": "4070765020670", "url": "https://www.dm.de/p/d/1230710/denkmit-geschirrspuelmittel-tabs-all-in-one"}, "at": {"name": "Geschirrspültabs All in One, 577,5 g", "price": 3.95, "regular_price": null, "promo": false, "gtin": "4070765020670", "url": "https://www.dm.at/p/d/1230710/denkmit-geschirrspueltabs-all-in-one"}}, {"id": 31, "cat": "Reinigungsmittel", "sub": "Klarspüler", "type": "Eigenmarke", "brand": "Denkmit", "name": "Klarspüler", "qty": "1 l", "match": "gtin", "note": "", "de": {"name": "Klarspüler, 1 l", "price": 0.85, "regular_price": null, "promo": false, "gtin": "4070765088205", "url": "https://www.dm.de/p/d/1125375/denkmit-klarspueler"}, "at": {"name": "Klarspüler, 1 l", "price": 1.15, "regular_price": null, "promo": false, "gtin": "4070765088205", "url": "https://www.dm.at/p/d/1125375/denkmit-klarspueler"}}, {"id": 32, "cat": "Reinigungsmittel", "sub": "Spülmaschinensalz", "type": "Eigenmarke", "brand": "Denkmit", "name": "Spülmaschinen-Salz Spezialsalz", "qty": "2 kg", "match": "gtin", "note": "", "de": {"name": "Spülmaschinen-Salz Spezialsalz, 2 kg", "price": 0.75, "regular_price": null, "promo": false, "gtin": "4066447789577", "url": "https://www.dm.de/p/d/1004727/denkmit-spuelmaschinen-salz-spezialsalz"}, "at": {"name": "Geschirrspül-Salz Spezial, 2 kg", "price": 0.95, "regular_price": null, "promo": false, "gtin": "4066447789577", "url": "https://www.dm.at/p/d/1004727/denkmit-geschirrspuel-salz-spezial"}}, {"id": 33, "cat": "Reinigungsmittel", "sub": "Maschinenpfleger", "type": "Eigenmarke", "brand": "Denkmit", "name": "Maschinenpfleger", "qty": "250 ml", "match": "gtin", "note": "DE product name says 250 g but Grundpreis 0,25 l; same GTIN and DAN as AT 250 ml.", "de": {"name": "Maschinenpfleger, 250 g", "price": 0.75, "regular_price": null, "promo": false, "gtin": "4066447791587", "url": "https://www.dm.de/p/d/1046083/denkmit-maschinenpfleger"}, "at": {"name": "Maschinenpfleger 4-Fach Power, 250 ml", "price": 0.95, "regular_price": null, "promo": false, "gtin": "4066447791587", "url": "https://www.dm.at/p/d/1046083/denkmit-maschinenpfleger-4-fach-power"}}, {"id": 34, "cat": "Reinigungsmittel", "sub": "Waschmittel Caps", "type": "Eigenmarke", "brand": "Denkmit", "name": "Vollwaschmittel 3in1 Aktiv Caps", "qty": "22 Wl", "match": "gtin", "note": "", "de": {"name": "Vollwaschmittel 3in1 Aktiv Caps, 22 Wl", "price": 4.45, "regular_price": null, "promo": false, "gtin": "4070765007435", "url": "https://www.dm.de/p/d/1578011/denkmit-vollwaschmittel-3in1-aktiv-caps"}, "at": {"name": "Vollwaschmittel Caps 3in1 Aktiv, 22 St", "price": 4.75, "regular_price": null, "promo": false, "gtin": "4070765007435", "url": "https://www.dm.at/p/d/1578011/denkmit-vollwaschmittel-caps-3in1-aktiv"}}, {"id": 35, "cat": "Reinigungsmittel", "sub": "Weichspüler", "type": "Eigenmarke", "brand": "Denkmit", "name": "Weichspüler Soft Embrace 40WL", "qty": "1 l (40 Wl)", "match": "gtin", "note": "", "de": {"name": "Weichspüler Soft Embrace 40WL, 1 l", "price": 1.25, "regular_price": null, "promo": false, "gtin": "4066447861297", "url": "https://www.dm.de/p/d/3067489/denkmit-weichspueler-soft-embrace-40wl"}, "at": {"name": "Weichspüler Soft Embrace, 40 Wl", "price": 1.75, "regular_price": null, "promo": false, "gtin": "4066447861297", "url": "https://www.dm.at/p/d/3067489/denkmit-weichspueler-soft-embrace"}}, {"id": 36, "cat": "Reinigungsmittel", "sub": "Allzweckreiniger", "type": "Eigenmarke", "brand": "Denkmit", "name": "Allzweckreiniger Frühlingsmoment", "qty": "1 l", "match": "gtin", "note": "", "de": {"name": "Allzweckreiniger Frühlingsmoment, 1 l", "price": 0.95, "regular_price": null, "promo": false, "gtin": "4070765104622", "url": "https://www.dm.de/p/d/1665084/denkmit-allzweckreiniger-fruehlingsmoment"}, "at": {"name": "Allzweckreiniger Frühlingsmoment, 1 l", "price": 1.35, "regular_price": null, "promo": false, "gtin": "4070765104622", "url": "https://www.dm.at/p/d/1665084/denkmit-allzweckreiniger-fruehlingsmoment"}}, {"id": 37, "cat": "Reinigungsmittel", "sub": "WC-Reiniger", "type": "Eigenmarke", "brand": "Denkmit", "name": "WC Reiniger", "qty": "750 ml", "match": "gtin", "note": "", "de": {"name": "WC Reiniger, 750 ml", "price": 0.95, "regular_price": null, "promo": false, "gtin": "4066447790696", "url": "https://www.dm.de/p/d/1302856/denkmit-wc-reiniger"}, "at": {"name": "WC-Reiniger Gel, 750 ml", "price": 1.25, "regular_price": null, "promo": false, "gtin": "4066447790696", "url": "https://www.dm.at/p/d/1302856/denkmit-wc-reiniger-gel"}}, {"id": 38, "cat": "Reinigungsmittel", "sub": "Glasreiniger", "type": "Eigenmarke", "brand": "Denkmit", "name": "Glasreiniger mit Glanzschutz-Formel", "qty": "1 l", "match": "gtin", "note": "", "de": {"name": "Glasreiniger mit Glanzschutz-Formel, 1 l", "price": 0.85, "regular_price": null, "promo": false, "gtin": "4066447921595", "url": "https://www.dm.de/p/d/1427532/denkmit-glasreiniger-mit-glanzschutz-formel"}, "at": {"name": "Glasreiniger mit Glanzschutzformel, 1 l", "price": 1.25, "regular_price": null, "promo": false, "gtin": "4066447921595", "url": "https://www.dm.at/p/d/1427532/denkmit-glasreiniger-mit-glanzschutzformel"}}, {"id": 39, "cat": "Reinigungsmittel", "sub": "Badreiniger", "type": "Eigenmarke", "brand": "Denkmit", "name": "Badreiniger", "qty": "750 ml", "match": "gtin", "note": "", "de": {"name": "Badreiniger, 750 ml", "price": 0.85, "regular_price": null, "promo": false, "gtin": "4070765039641", "url": "https://www.dm.de/p/d/3157659/denkmit-badreiniger"}, "at": {"name": "Spray Badreiniger, 750 ml", "price": 1.25, "regular_price": null, "promo": false, "gtin": "4070765039641", "url": "https://www.dm.at/p/d/3157659/denkmit-spray-badreiniger"}}, {"id": 40, "cat": "Reinigungsmittel", "sub": "Küchenreiniger / Desinfektionsreiniger", "type": "Eigenmarke", "brand": "Denkmit", "name": "Hygienereiniger Küche & Kühlschrank", "qty": "750 ml", "match": "gtin", "note": "", "de": {"name": "Hygienereiniger Küche & Kühlschrank, 750 ml", "price": 1.95, "regular_price": null, "promo": false, "gtin": "4058172767944", "url": "https://www.dm.de/p/d/1538513/denkmit-hygienereiniger-kueche-und-kuehlschrank"}, "at": {"name": "Hygienereiniger Küche, 750 ml", "price": 1.95, "regular_price": null, "promo": false, "gtin": "4058172767944", "url": "https://www.dm.at/p/d/1538513/denkmit-hygienereiniger-kueche"}}, {"id": 41, "cat": "Reinigungsmittel", "sub": "Hand-Geschirrspülmittel", "type": "Marke", "brand": "FAIRY", "name": "Spülmittel Max Power Original", "qty": "545 ml", "match": "gtin", "note": "", "de": {"name": "Spülmittel Max Power Original, 545 ml", "price": 2.95, "regular_price": null, "promo": false, "gtin": "8006540422731", "url": "https://www.dm.de/p/d/1918444/fairy-spuelmittel-max-power-original"}, "at": {"name": "Spülmittel Max Power Original, 545 ml", "price": 3.75, "regular_price": null, "promo": false, "gtin": "8006540422731", "url": "https://www.dm.at/p/d/1918444/fairy-spuelmittel-max-power-original"}}, {"id": 42, "cat": "Reinigungsmittel", "sub": "Klarspüler", "type": "Marke", "brand": "Finish", "name": "Klarspüler Glanz & Klarspüler", "qty": "800 ml", "match": "gtin", "note": "", "de": {"name": "Klarspüler Glanz & Klarspüler, 800 ml", "price": 2.75, "regular_price": null, "promo": false, "gtin": "4251758425034", "url": "https://www.dm.de/p/d/1638064/finish-klarspueler-glanz-und-klarspueler"}, "at": {"name": "Klarspüler Glanz & Klar, 800 ml", "price": 3.95, "regular_price": null, "promo": false, "gtin": "4251758425034", "url": "https://www.dm.at/p/d/1638064/finish-klarspueler-glanz-und-klar"}}, {"id": 43, "cat": "Reinigungsmittel", "sub": "Spülmaschinensalz", "type": "Marke", "brand": "Finish", "name": "Spülmaschinen-Salz Spezialsalz", "qty": "1,2 kg", "match": "gtin", "note": "", "de": {"name": "Spülmaschinen-Salz Spezialsalz, 1,2 kg", "price": 1.45, "regular_price": null, "promo": false, "gtin": "4002448046424", "url": "https://www.dm.de/p/d/1010054/finish-spuelmaschinen-salz-spezialsalz"}, "at": {"name": "Geschirrspül-Salz Spezial, 1,2 kg", "price": 1.35, "regular_price": null, "promo": false, "gtin": "4002448046424", "url": "https://www.dm.at/p/d/1010054/finish-geschirrspuel-salz-spezial"}}, {"id": 44, "cat": "Reinigungsmittel", "sub": "Maschinenpfleger", "type": "Marke", "brand": "Somat", "name": "Maschinenreiniger Intensiv", "qty": "250 ml", "match": "gtin", "note": "", "de": {"name": "Maschinenreiniger Intensiv, 250 ml", "price": 2.45, "regular_price": null, "promo": false, "gtin": "4015200035772", "url": "https://www.dm.de/p/d/1455227/somat-maschinenreiniger-intensiv"}, "at": {"name": "Spülmaschinen-Reiniger Intensiv, 250 ml", "price": 3.75, "regular_price": null, "promo": false, "gtin": "4015200035772", "url": "https://www.dm.at/p/d/1455227/somat-spuelmaschinen-reiniger-intensiv"}}, {"id": 45, "cat": "Reinigungsmittel", "sub": "Spülmaschinen-Gel", "type": "Marke", "brand": "Somat", "name": "Spülmaschinen-Reiniger Excellence 5in1 Gel Power & Perls 60 Spülgänge", "qty": "960 ml (60 Spülgänge)", "match": "gtin", "note": "", "de": {"name": "Spülmaschinen-Reiniger Excellence 5in1 Gel Power & Perls 60 Spülgänge, 960 ml", "price": 7.95, "regular_price": null, "promo": false, "gtin": "4015200038162", "url": "https://www.dm.de/p/d/3130473/somat-spuelmaschinen-reiniger-excellence-5in1-gel-power-und-perls-60-spuelgaenge"}, "at": {"name": "Geschirrreiniger Gel 5 in 1, 960 ml", "price": 9.35, "regular_price": null, "promo": false, "gtin": "4015200038162", "url": "https://www.dm.at/p/d/3130473/somat-geschirrreiniger-gel-5-in-1"}}, {"id": 46, "cat": "Reinigungsmittel", "sub": "Allzweckreiniger", "type": "Marke", "brand": "Frosch", "name": "Allzweckreiniger Multiflächen Orange", "qty": "500 ml", "match": "gtin", "note": "", "de": {"name": "Allzweckreiniger Multiflächen Orange, 500 ml", "price": 2.45, "regular_price": null, "promo": false, "gtin": "4001499961540", "url": "https://www.dm.de/p/d/1384074/frosch-allzweckreiniger-multiflaechen-orange"}, "at": {"name": "Allzweckreiniger Multiflächen Orange, 500 ml", "price": 2.95, "regular_price": null, "promo": false, "gtin": "4001499961540", "url": "https://www.dm.at/p/d/1384074/frosch-allzweckreiniger-multiflaechen-orange"}}, {"id": 47, "cat": "Reinigungsmittel", "sub": "Küchenreiniger", "type": "Marke", "brand": "Frosch", "name": "Küchenreiniger Fett-Entferner Grapefruit", "qty": "500 ml", "match": "gtin", "note": "", "de": {"name": "Küchenreiniger Fett-Entferner Grapefruit, 500 ml", "price": 2.45, "regular_price": null, "promo": false, "gtin": "4001499961526", "url": "https://www.dm.de/p/d/1298936/frosch-kuechenreiniger-fett-entferner-grapefruit"}, "at": {"name": "Fettreiniger Grapefruit, 500 ml", "price": 2.75, "regular_price": null, "promo": false, "gtin": "4001499961526", "url": "https://www.dm.at/p/d/1298936/frosch-fettreiniger-grapefruit"}}, {"id": 48, "cat": "Reinigungsmittel", "sub": "Kalkreiniger / Badreiniger", "type": "Marke", "brand": "Frosch", "name": "Kalkreiniger Himbeer-Essig", "qty": "500 ml", "match": "gtin", "note": "", "de": {"name": "Kalkreiniger Himbeer-Essig, 500 ml", "price": 2.45, "regular_price": null, "promo": false, "gtin": "4001499961519", "url": "https://www.dm.de/p/d/1489113/frosch-kalkreiniger-himbeer-essig"}, "at": {"name": "Kalkreiniger Himbeer Essig, 500 ml", "price": 3.25, "regular_price": null, "promo": false, "gtin": "4001499961519", "url": "https://www.dm.at/p/d/1489113/frosch-kalkreiniger-himbeer-essig"}}, {"id": 49, "cat": "Reinigungsmittel", "sub": "Waschmittel Caps", "type": "Marke", "brand": "ARIEL", "name": "Vollwaschmittel Pods Max Power", "qty": "15 Wl", "match": "gtin", "note": "AT: online only.", "de": {"name": "Vollwaschmittel Pods Max Power, 15 Wl", "price": 8.95, "regular_price": null, "promo": false, "gtin": "8006530231015", "url": "https://www.dm.de/p/d/3119197/ariel-vollwaschmittel-pods-max-power"}, "at": {"name": "Universalwaschmittel Pods Max Power 3 Integrierte Waschzusätze, 15 Wl", "price": 9.95, "regular_price": null, "promo": false, "gtin": "8006530231015", "url": "https://www.dm.at/p/d/3119197/ariel-universalwaschmittel-pods-max-power-3-integrierte-waschzusaetze"}}, {"id": 50, "cat": "Reinigungsmittel", "sub": "Weichspüler", "type": "Marke", "brand": "Lenor", "name": "Weichspüler Aprilfrisch 42WL", "qty": "882 ml (42 Wl)", "match": "gtin", "note": "", "de": {"name": "Weichspüler Aprilfrisch 42WL, 882 ml", "price": 2.95, "regular_price": null, "promo": false, "gtin": "8700216693967", "url": "https://www.dm.de/p/d/3058454/lenor-weichspueler-aprilfrisch-42wl"}, "at": {"name": "Weichspüler Aprilfrisch, 42 Wl", "price": 2.8, "regular_price": null, "promo": false, "gtin": "8700216693967", "url": "https://www.dm.at/p/d/3058454/lenor-weichspueler-aprilfrisch"}}, {"id": 51, "cat": "Reinigungsmittel", "sub": "WC-Reiniger", "type": "Marke", "brand": "WC-Ente", "name": "WC-Reiniger Frische-Siegel Limone Nachfüllpack 2 St", "qty": "2 St (72 ml)", "match": "gtin", "note": "", "de": {"name": "WC-Reiniger Frische-Siegel Limone Nachfüllpack 2 St, 72 ml", "price": 3.45, "regular_price": null, "promo": false, "gtin": "5000204199550", "url": "https://www.dm.de/p/d/1311080/wc-ente-wc-reiniger-frische-siegel-limone-nachfuellpack-2-st"}, "at": {"name": "WC-Reiniger Frische-Siegel Limone Nachfüllpack, 2 St", "price": 4.95, "regular_price": null, "promo": false, "gtin": "5000204199550", "url": "https://www.dm.at/p/d/1311080/wc-ente-wc-reiniger-frische-siegel-limone-nachfuellpack"}}, {"id": 52, "cat": "Reinigungsmittel", "sub": "Glasreiniger", "type": "Marke", "brand": "Frosch", "name": "Glasreiniger Spiritus Nachfüllpack", "qty": "950 ml", "match": "gtin", "note": "Refill pack; chosen because the 500 ml spray has different GTIN/DAN in AT.", "de": {"name": "Glasreiniger Spiritus Nachfüllpack, 950 ml", "price": 2.95, "regular_price": null, "promo": false, "gtin": "4001499953958", "url": "https://www.dm.de/p/d/1569789/frosch-glasreiniger-spiritus-nachfuellpack"}, "at": {"name": "Glasreiniger Spiritus Nachfüllpack, 950 ml", "price": 2.45, "regular_price": null, "promo": false, "gtin": "4001499953958", "url": "https://www.dm.at/p/d/1569789/frosch-glasreiniger-spiritus-nachfuellpack"}}, {"id": 53, "cat": "Kosmetik", "sub": "Nachtcreme", "type": "Eigenmarke", "brand": "Balea", "name": "Nachtcreme", "qty": "50 ml", "match": "gtin", "note": "", "de": {"name": "Nachtcreme, 50 ml", "price": 4.95, "regular_price": null, "promo": false, "gtin": "4070765012408", "url": "https://www.dm.de/p/d/1567668/balea-nachtcreme"}, "at": {"name": "Nachtcreme, 50 ml", "price": 5.95, "regular_price": null, "promo": false, "gtin": "4070765012408", "url": "https://www.dm.at/p/d/1567668/balea-nachtcreme"}}, {"id": 54, "cat": "Kosmetik", "sub": "Tagescreme", "type": "Eigenmarke", "brand": "Balea", "name": "Gesichtscreme Urea LSF 15", "qty": "50 ml", "match": "gtin", "note": "", "de": {"name": "Gesichtscreme Urea LSF 15, 50 ml", "price": 2.45, "regular_price": null, "promo": false, "gtin": "4066447986488", "url": "https://www.dm.de/p/d/1635098/balea-gesichtscreme-urea-lsf-15"}, "at": {"name": "Gesichtscreme Urea LSF 15, 50 ml", "price": 2.95, "regular_price": null, "promo": false, "gtin": "4066447986488", "url": "https://www.dm.at/p/d/1635098/balea-gesichtscreme-urea-lsf-15"}}, {"id": 55, "cat": "Kosmetik", "sub": "Bodylotion", "type": "Eigenmarke", "brand": "Balea", "name": "Bodylotion Urea", "qty": "400 ml", "match": "gtin", "note": "AT name: Bodylotion 3in1 Urea", "de": {"name": "Bodylotion Urea, 400 ml", "price": 1.75, "regular_price": null, "promo": false, "gtin": "4066447870251", "url": "https://www.dm.de/p/d/1574857/balea-bodylotion-urea"}, "at": {"name": "Bodylotion 3in1 Urea, 400 ml", "price": 1.95, "regular_price": null, "promo": false, "gtin": "4066447870251", "url": "https://www.dm.at/p/d/1574857/balea-bodylotion-3in1-urea"}}, {"id": 56, "cat": "Kosmetik", "sub": "Körpermilch", "type": "Eigenmarke", "brand": "Balea", "name": "Körpermilch reichhaltig", "qty": "400 ml", "match": "gtin", "note": "AT name: Bodylotion Reichhaltig", "de": {"name": "Körpermilch reichhaltig, 400 ml", "price": 0.95, "regular_price": null, "promo": false, "gtin": "4066447968842", "url": "https://www.dm.de/p/d/1638733/balea-koerpermilch-reichhaltig"}, "at": {"name": "Bodylotion Reichhaltig, 400 ml", "price": 1.45, "regular_price": null, "promo": false, "gtin": "4066447968842", "url": "https://www.dm.at/p/d/1638733/balea-bodylotion-reichhaltig"}}, {"id": 57, "cat": "Kosmetik", "sub": "Hautcreme", "type": "Eigenmarke", "brand": "Balea", "name": "Gesichtscreme Pflegecreme 24h", "qty": "250 ml", "match": "gtin", "note": "Same GTIN; DE name Gesichtscreme Pflegecreme 24h, AT name Pflegecreme Sheabutter (250 ml Dose)", "de": {"name": "Gesichtscreme Pflegecreme 24h, 250 ml", "price": 1.15, "regular_price": null, "promo": false, "gtin": "4066447969290", "url": "https://www.dm.de/p/d/1601160/balea-gesichtscreme-pflegecreme-24h"}, "at": {"name": "Pflegecreme Sheabutter, 250 ml", "price": 1.65, "regular_price": null, "promo": false, "gtin": "4066447969290", "url": "https://www.dm.at/p/d/1601160/balea-pflegecreme-sheabutter"}}, {"id": 58, "cat": "Kosmetik", "sub": "Handcreme", "type": "Eigenmarke", "brand": "Balea", "name": "Handcreme Olive, sehr trockene Hände", "qty": "100 ml", "match": "gtin", "note": "", "de": {"name": "Handcreme Olive, sehr trockene Hände, 100 ml", "price": 0.75, "regular_price": null, "promo": false, "gtin": "4070765001228", "url": "https://www.dm.de/p/d/1574859/balea-handcreme-olive-sehr-trockene-haende"}, "at": {"name": "Handcreme Olive, 100 ml", "price": 0.95, "regular_price": null, "promo": false, "gtin": "4070765001228", "url": "https://www.dm.at/p/d/1574859/balea-handcreme-olive"}}, {"id": 59, "cat": "Kosmetik", "sub": "Lippenpflege", "type": "Eigenmarke", "brand": "Balea", "name": "Lippenpflege Intensiv", "qty": "4,8 g", "match": "gtin", "note": "", "de": {"name": "Lippenpflege Intensiv, 4,8 g", "price": 0.75, "regular_price": null, "promo": false, "gtin": "4066447983586", "url": "https://www.dm.de/p/d/3044226/balea-lippenpflege-intensiv"}, "at": {"name": "Lippenpflege Intensiv, 4,8 g", "price": 0.85, "regular_price": null, "promo": false, "gtin": "4066447983586", "url": "https://www.dm.at/p/d/3044226/balea-lippenpflege-intensiv"}}, {"id": 60, "cat": "Kosmetik", "sub": "Spülung", "type": "Eigenmarke", "brand": "Balea", "name": "Conditioner Feuchtigkeit", "qty": "300 ml", "match": "gtin", "note": "", "de": {"name": "Conditioner Feuchtigkeit, 300 ml", "price": 0.65, "regular_price": null, "promo": false, "gtin": "4066447982756", "url": "https://www.dm.de/p/d/1679748/balea-conditioner-feuchtigkeit"}, "at": {"name": "Conditioner Feuchtigkeit, 300 ml", "price": 0.95, "regular_price": null, "promo": false, "gtin": "4066447982756", "url": "https://www.dm.at/p/d/1679748/balea-conditioner-feuchtigkeit"}}, {"id": 61, "cat": "Kosmetik", "sub": "Haarkur", "type": "Eigenmarke", "brand": "Balea PROFESSIONAL", "name": "Haarkur Keratin Repair", "qty": "300 ml", "match": "gtin", "note": "", "de": {"name": "Haarkur Keratin Repair, 300 ml", "price": 2.75, "regular_price": null, "promo": false, "gtin": "4070765002003", "url": "https://www.dm.de/p/d/1688653/balea-professional-haarkur-keratin-repair"}, "at": {"name": "Haarkur Keratin Repair, 300 ml", "price": 3.55, "regular_price": null, "promo": false, "gtin": "4070765002003", "url": "https://www.dm.at/p/d/1688653/balea-professional-haarkur-keratin-repair"}}, {"id": 62, "cat": "Kosmetik", "sub": "Haarspray", "type": "Eigenmarke", "brand": "Balea", "name": "Haarspray Volume Effect", "qty": "300 ml", "match": "gtin", "note": "", "de": {"name": "Haarspray Volume Effect, 300 ml", "price": 1.15, "regular_price": null, "promo": false, "gtin": "4070765016932", "url": "https://www.dm.de/p/d/1092936/balea-haarspray-volume-effect"}, "at": {"name": "Haarspray Volume Effect, 300 ml", "price": 1.45, "regular_price": null, "promo": false, "gtin": "4070765016932", "url": "https://www.dm.at/p/d/1092936/balea-haarspray-volume-effect"}}, {"id": 63, "cat": "Kosmetik", "sub": "Tagescreme (Naturkosmetik)", "type": "Eigenmarke", "brand": "alverde NATURKOSMETIK", "name": "Gesichtscreme Wildrose", "qty": "50 ml", "match": "gtin", "note": "AT name: Tagescreme Bio-Wildrose für trockene Haut", "de": {"name": "Gesichtscreme Wildrose, 50 ml", "price": 2.85, "regular_price": null, "promo": false, "gtin": "4066447910759", "url": "https://www.dm.de/p/d/1234577/alverde-naturkosmetik-gesichtscreme-wildrose"}, "at": {"name": "Tagescreme Bio-Wildrose für trockene Haut, 50 ml", "price": 2.95, "regular_price": null, "promo": false, "gtin": "4066447910759", "url": "https://www.dm.at/p/d/1234577/alverde-naturkosmetik-tagescreme-bio-wildrose-fuer-trockene-haut"}}, {"id": 64, "cat": "Kosmetik", "sub": "Sonnenschutz", "type": "Eigenmarke", "brand": "SUNDANCE", "name": "Sonnenspray LSF 30", "qty": "200 ml", "match": "gtin", "note": "", "de": {"name": "Sonnenspray LSF 30, 200 ml", "price": 3.95, "regular_price": null, "promo": false, "gtin": "4067796255904", "url": "https://www.dm.de/p/d/1217044/sundance-sonnenspray-lsf-30"}, "at": {"name": "Sonnenspray LSF 30, 200 ml", "price": 6.45, "regular_price": null, "promo": false, "gtin": "4067796255904", "url": "https://www.dm.at/p/d/1217044/sundance-sonnenspray-lsf-30"}}, {"id": 65, "cat": "Kosmetik", "sub": "After Sun", "type": "Eigenmarke", "brand": "SUNDANCE", "name": "After Sun Gel Aloe Vera", "qty": "200 ml", "match": "gtin", "note": "", "de": {"name": "After Sun Gel Aloe Vera, 200 ml", "price": 2.15, "regular_price": null, "promo": false, "gtin": "4067796259384", "url": "https://www.dm.de/p/d/1493652/sundance-after-sun-gel-aloe-vera"}, "at": {"name": "After Sun Gel Aloe Vera, 200 ml", "price": 3.95, "regular_price": null, "promo": false, "gtin": "4067796259384", "url": "https://www.dm.at/p/d/1493652/sundance-after-sun-gel-aloe-vera"}}, {"id": 66, "cat": "Kosmetik", "sub": "Hautcreme", "type": "Marke", "brand": "NIVEA", "name": "Pflegecreme in der Dose", "qty": "150 ml", "match": "gtin", "note": "NIVEA Creme Dose; AT name: Pflegecreme", "de": {"name": "Pflegecreme in der Dose, 150 ml", "price": 2.85, "regular_price": null, "promo": false, "gtin": "4005900917133", "url": "https://www.dm.de/p/d/1441864/nivea-pflegecreme-in-der-dose"}, "at": {"name": "Pflegecreme, 150 ml", "price": 3.15, "regular_price": null, "promo": false, "gtin": "4005900917133", "url": "https://www.dm.at/p/d/1441864/nivea-pflegecreme"}}, {"id": 67, "cat": "Kosmetik", "sub": "Feuchtigkeitscreme", "type": "Marke", "brand": "NIVEA", "name": "Feuchtigkeitscreme soft im Tiegel", "qty": "200 ml", "match": "gtin", "note": "NIVEA Soft Tiegel; AT name: Pflegecreme Soft", "de": {"name": "Feuchtigkeitscreme soft im Tiegel, 200 ml", "price": 3.85, "regular_price": null, "promo": false, "gtin": "4006000265704", "url": "https://www.dm.de/p/d/1441732/nivea-feuchtigkeitscreme-soft-im-tiegel"}, "at": {"name": "Pflegecreme Soft, 200 ml", "price": 3.35, "regular_price": null, "promo": false, "gtin": "4006000265704", "url": "https://www.dm.at/p/d/1441732/nivea-pflegecreme-soft"}}, {"id": 68, "cat": "Kosmetik", "sub": "Körpermilch", "type": "Marke", "brand": "NIVEA", "name": "Körpermilch Body Creme reichhaltig", "qty": "400 ml", "match": "gtin", "note": "AT name: Bodycreme reichhaltig", "de": {"name": "Körpermilch Body Creme reichhaltig, 400 ml", "price": 5.45, "regular_price": null, "promo": false, "gtin": "4006000272146", "url": "https://www.dm.de/p/d/3152316/nivea-koerpermilch-body-creme-reichhaltig"}, "at": {"name": "Bodycreme reichhaltig, 400 ml", "price": 6.95, "regular_price": null, "promo": false, "gtin": "4006000272146", "url": "https://www.dm.at/p/d/3152316/nivea-bodycreme-reichhaltig"}}, {"id": 69, "cat": "Kosmetik", "sub": "Lippenpflege", "type": "Marke", "brand": "Labello", "name": "Lippenpflege Original", "qty": "4,8 g", "match": "name+menge", "note": "Same dm article no. 1709762 in both shops, GTINs differ; DE tile marked Nur Online", "de": {"name": "Lippenpflege Original, 4,8 g", "price": 2.25, "regular_price": null, "promo": false, "gtin": "4006000243764", "url": "https://www.dm.de/p/d/1709762/labello-lippenpflege-original"}, "at": {"name": "Lippenpflege Stift Original, 4,8 g", "price": 1.95, "regular_price": null, "promo": false, "gtin": "4005900967565", "url": "https://www.dm.at/p/d/1709762/labello-lippenpflege-stift-original"}}, {"id": 70, "cat": "Kosmetik", "sub": "Mizellenwasser", "type": "Marke", "brand": "GARNIER SKIN ACTIVE", "name": "Mizellenwasser empfindliche Haut All in 1", "qty": "400 ml", "match": "gtin", "note": "", "de": {"name": "Mizellenwasser empfindliche Haut All in 1, 400 ml", "price": 3.95, "regular_price": null, "promo": false, "gtin": "3600541698482", "url": "https://www.dm.de/p/d/1425075/garnier-skin-active-mizellenwasser-empfindliche-haut-all-in-1"}, "at": {"name": "Mizellenwasser All-in-1 empfindliche Haut, 400 ml", "price": 4.45, "regular_price": null, "promo": false, "gtin": "3600541698482", "url": "https://www.dm.at/p/d/1425075/garnier-skin-active-mizellenwasser-all-in-1-empfindliche-haut"}}, {"id": 71, "cat": "Kosmetik", "sub": "Haarspray", "type": "Marke", "brand": "Schwarzkopf taft", "name": "Haarspray POWER Halt 5", "qty": "250 ml", "match": "gtin", "note": "", "de": {"name": "Haarspray POWER Halt 5, 250 ml", "price": 3.45, "regular_price": null, "promo": false, "gtin": "4015100810066", "url": "https://www.dm.de/p/d/1580758/schwarzkopf-taft-haarspray-power-halt-5"}, "at": {"name": "Haarspray Power Halt 5, 250 ml", "price": 3.15, "regular_price": null, "promo": false, "gtin": "4015100810066", "url": "https://www.dm.at/p/d/1580758/schwarzkopf-taft-haarspray-power-halt-5"}}, {"id": 72, "cat": "Kosmetik", "sub": "Spülung", "type": "Marke", "brand": "Schwarzkopf GLISS", "name": "Conditioner Total Repair", "qty": "200 ml", "match": "gtin", "note": "", "de": {"name": "Conditioner Total Repair, 200 ml", "price": 2.95, "regular_price": null, "promo": false, "gtin": "4015100812275", "url": "https://www.dm.de/p/d/1430910/schwarzkopf-gliss-conditioner-total-repair"}, "at": {"name": "Conditioner Total Repair, 200 ml", "price": 3.45, "regular_price": null, "promo": false, "gtin": "4015100812275", "url": "https://www.dm.at/p/d/1430910/schwarzkopf-gliss-conditioner-total-repair"}}, {"id": 73, "cat": "Kosmetik", "sub": "Haarkur", "type": "Marke", "brand": "Schwarzkopf GLISS", "name": "Haarmaske 4in1 Total Repair", "qty": "400 ml", "match": "gtin", "note": "", "de": {"name": "Haarmaske 4in1 Total Repair, 400 ml", "price": 5.75, "regular_price": null, "promo": false, "gtin": "4015100813517", "url": "https://www.dm.de/p/d/1431891/schwarzkopf-gliss-haarmaske-4in1-total-repair"}, "at": {"name": "Haarmaske 4in1 Total Repair, 400 ml", "price": 8.45, "regular_price": null, "promo": false, "gtin": "4015100813517", "url": "https://www.dm.at/p/d/1431891/schwarzkopf-gliss-haarmaske-4in1-total-repair"}}, {"id": 74, "cat": "Kosmetik", "sub": "Sonnenschutz", "type": "Marke", "brand": "NIVEA SUN", "name": "Sonnenspray Schutz & Pflege LSF 30", "qty": "200 ml", "match": "gtin", "note": "AT price roughly double the DE price; no strike-through/promo price shown in either tile (checked tile text)", "de": {"name": "Sonnenspray Schutz & Pflege LSF 30, 200 ml", "price": 9.25, "regular_price": null, "promo": false, "gtin": "4006000130651", "url": "https://www.dm.de/p/d/1144304/nivea-sun-sonnenspray-schutz-und-pflege-lsf-30"}, "at": {"name": "Sonnenspray Schutz und Pflege LSF 30, 200 ml", "price": 17.45, "regular_price": null, "promo": false, "gtin": "4006000130651", "url": "https://www.dm.at/p/d/1144304/nivea-sun-sonnenspray-schutz-und-pflege-lsf-30"}}, {"id": 75, "cat": "Kosmetik", "sub": "After Sun", "type": "Marke", "brand": "NIVEA SUN", "name": "After Sun Lotion mit Aloe Vera & Hyaluron", "qty": "400 ml", "match": "gtin", "note": "AT name: After Sun Lotion Pflegend; AT price roughly double, no promo marker in either tile", "de": {"name": "After Sun Lotion mit Aloe Vera & Hyaluron, 400 ml", "price": 7.45, "regular_price": null, "promo": false, "gtin": "4006000232911", "url": "https://www.dm.de/p/d/1268421/nivea-sun-after-sun-lotion-mit-aloe-vera-und-hyaluron"}, "at": {"name": "After Sun Lotion Pflegend, 400 ml", "price": 14.95, "regular_price": null, "promo": false, "gtin": "4006000232911", "url": "https://www.dm.at/p/d/1268421/nivea-sun-after-sun-lotion-pflegend"}}, {"id": 76, "cat": "Kosmetik", "sub": "Bodylotion", "type": "Marke", "brand": "Neutrogena", "name": "Bodylotion Deep Moisture trockene Haut", "qty": "400 ml", "match": "gtin", "note": "AT name: Bodylotion Deep Moisture", "de": {"name": "Bodylotion Deep Moisture trockene Haut, 400 ml", "price": 4.95, "regular_price": null, "promo": false, "gtin": "3574661842615", "url": "https://www.dm.de/p/d/3064189/neutrogena-bodylotion-deep-moisture-trockene-haut"}, "at": {"name": "Bodylotion Deep Moisture, 400 ml", "price": 4.65, "regular_price": null, "promo": false, "gtin": "3574661842615", "url": "https://www.dm.at/p/d/3064189/neutrogena-bodylotion-deep-moisture"}}, {"id": 77, "cat": "Kosmetik", "sub": "Tagescreme (Anti-Age)", "type": "Marke", "brand": "L'ORÉAL PARiS REVITALIFT", "name": "Gesichtscreme Revitalift Classic LSF 30", "qty": "50 ml", "match": "gtin", "note": "", "de": {"name": "Gesichtscreme Revitalift Classic LSF 30, 50 ml", "price": 10.95, "regular_price": null, "promo": false, "gtin": "3600523670642", "url": "https://www.dm.de/p/d/1562889/l-oreal-paris-revitalift-gesichtscreme-revitalift-classic-lsf-30"}, "at": {"name": "Gesichtscreme Revitalift Classic LSF 30, 50 ml", "price": 12.45, "regular_price": null, "promo": false, "gtin": "3600523670642", "url": "https://www.dm.at/p/d/1562889/l-oreal-paris-revitalift-gesichtscreme-revitalift-classic-lsf-30"}}, {"id": 78, "cat": "Kosmetik", "sub": "Handcreme", "type": "Marke", "brand": "Kamill", "name": "Hand- & Nagelcreme Classic mit Kamille in der Dose", "qty": "150 ml", "match": "gtin", "note": "AT name: Hand- & Nagelcreme mit Kamille", "de": {"name": "Hand- & Nagelcreme Classic mit Kamille in der Dose, 150 ml", "price": 1.65, "regular_price": null, "promo": false, "gtin": "4000196031136", "url": "https://www.dm.de/p/d/1210773/kamill-hand-und-nagelcreme-classic-mit-kamille-in-der-dose"}, "at": {"name": "Hand- & Nagelcreme mit Kamille, 150 ml", "price": 1.55, "regular_price": null, "promo": false, "gtin": "4000196031136", "url": "https://www.dm.at/p/d/1210773/kamill-hand-und-nagelcreme-mit-kamille"}}, {"id": 79, "cat": "Make-Up", "sub": "Mascara", "type": "Eigenmarke", "brand": "trend !t up", "name": "Mascara N°1 Express Volumen 010 Black", "qty": "12 ml", "match": "gtin", "note": "", "de": {"name": "Mascara N°1 Express Volumen 010 Black", "price": 2.45, "regular_price": null, "promo": false, "gtin": "4067796067903", "url": "https://www.dm.de/p/d/1559360/trend-t-up-mascara-n-1-express-volumen-010-black"}, "at": {"name": "Mascara N°1 Express Volume 010", "price": 3.45, "regular_price": null, "promo": false, "gtin": "4067796067903", "url": "https://www.dm.at/p/d/1559360/trend-t-up-mascara-n-1-express-volume-010"}}, {"id": 80, "cat": "Make-Up", "sub": "Kajal", "type": "Eigenmarke", "brand": "trend !t up", "name": "Kajal Contour & Glide Waterproof 010", "qty": "0,3 g", "match": "gtin", "note": "", "de": {"name": "Kajal Contour & Glide Waterproof 010", "price": 1.55, "regular_price": null, "promo": false, "gtin": "4066447994087", "url": "https://www.dm.de/p/d/1541707/trend-t-up-kajal-contour-und-glide-waterproof-010"}, "at": {"name": "Kajal Contour & Glide Waterproof 010", "price": 1.95, "regular_price": null, "promo": false, "gtin": "4066447994087", "url": "https://www.dm.at/p/d/1541707/trend-t-up-kajal-contour-und-glide-waterproof-010"}}, {"id": 81, "cat": "Make-Up", "sub": "Nagellack", "type": "Eigenmarke", "brand": "trend !t up", "name": "Nagellack Easy & Speedy 120 Black", "qty": "6 ml", "match": "gtin", "note": "", "de": {"name": "Nagellack Easy & Speedy 120 Black", "price": 1.25, "regular_price": null, "promo": false, "gtin": "4058172951008", "url": "https://www.dm.de/p/d/1647165/trend-t-up-nagellack-easy-und-speedy-120-black"}, "at": {"name": "Nagellack Easy & Speedy 120 Black", "price": 1.75, "regular_price": null, "promo": false, "gtin": "4058172951008", "url": "https://www.dm.at/p/d/1647165/trend-t-up-nagellack-easy-und-speedy-120-black"}}, {"id": 82, "cat": "Make-Up", "sub": "Concealer", "type": "Eigenmarke", "brand": "trend !t up", "name": "Concealer 18h High Coverage 010 Pancake", "qty": "4,5 ml", "match": "gtin", "note": "", "de": {"name": "Concealer 18h High Coverage 010 Pancake", "price": 2.95, "regular_price": null, "promo": false, "gtin": "4067796028775", "url": "https://www.dm.de/p/d/1694855/trend-t-up-concealer-18h-high-coverage-010-pancake"}, "at": {"name": "Concealer 18h High Coverage 010", "price": 2.95, "regular_price": null, "promo": false, "gtin": "4067796028775", "url": "https://www.dm.at/p/d/1694855/trend-t-up-concealer-18h-high-coverage-010"}}, {"id": 83, "cat": "Make-Up", "sub": "Foundation", "type": "Eigenmarke", "brand": "trend !t up", "name": "Foundation & Concealer The Foundcealer 2in1 010", "qty": "30 ml", "match": "gtin", "note": "", "de": {"name": "Foundation & Concealer The Foundcealer 2in1 010", "price": 4.95, "regular_price": null, "promo": false, "gtin": "4067796265750", "url": "https://www.dm.de/p/d/3112597/trend-t-up-foundation-und-concealer-the-foundcealer-2in1-010"}, "at": {"name": "Foundation & Concealer the Foundcealer 010", "price": 5.45, "regular_price": null, "promo": false, "gtin": "4067796265750", "url": "https://www.dm.at/p/d/3112597/trend-t-up-foundation-und-concealer-the-foundcealer-010"}}, {"id": 84, "cat": "Make-Up", "sub": "Puder", "type": "Eigenmarke", "brand": "trend !t up", "name": "Kompakt Puder All in One", "qty": "8 g", "match": "gtin", "note": "", "de": {"name": "Kompakt Puder All in One", "price": 2.95, "regular_price": null, "promo": false, "gtin": "4058172959233", "url": "https://www.dm.de/p/d/1637449/trend-t-up-kompakt-puder-all-in-one"}, "at": {"name": "Kompakt Puder All in One", "price": 3.75, "regular_price": null, "promo": false, "gtin": "4058172959233", "url": "https://www.dm.at/p/d/1637449/trend-t-up-kompakt-puder-all-in-one"}}, {"id": 85, "cat": "Make-Up", "sub": "Augenbrauenstift", "type": "Eigenmarke", "brand": "trend !t up", "name": "Augenbrauenstift 3in1 Brow'fection Expert 010 Ash Brown", "qty": "0,4 g", "match": "gtin", "note": "", "de": {"name": "Augenbrauenstift 3in1 Brow'fection Expert 010 Ash Brown", "price": 3.45, "regular_price": null, "promo": false, "gtin": "4067796068085", "url": "https://www.dm.de/p/d/3043183/trend-t-up-augenbrauenstift-3in1-brow-fection-expert-010-ash-brown"}, "at": {"name": "Augenbrauenstift & Augenbrauenpuder 3in1 Brow´fection Expert 010 Ash Brown", "price": 3.65, "regular_price": null, "promo": false, "gtin": "4067796068085", "url": "https://www.dm.at/p/d/3043183/trend-t-up-augenbrauenstift-und-augenbrauenpuder-3in1-brow-fection-expert-010-ash-brown"}}, {"id": 86, "cat": "Make-Up", "sub": "Lippenstift", "type": "Eigenmarke", "brand": "alverde NATURKOSMETIK", "name": "Lippenstift Matt 10 Red Carpet", "qty": "3 g", "match": "gtin", "note": "", "de": {"name": "Lippenstift Matt 10 Red Carpet", "price": 2.95, "regular_price": null, "promo": false, "gtin": "4067796262582", "url": "https://www.dm.de/p/d/3118358/alverde-naturkosmetik-lippenstift-matt-10-red-carpet"}, "at": {"name": "Lippenstift Matt 10 Red Carpet", "price": 3.45, "regular_price": null, "promo": false, "gtin": "4067796262582", "url": "https://www.dm.at/p/d/3118358/alverde-naturkosmetik-lippenstift-matt-10-red-carpet"}}, {"id": 87, "cat": "Make-Up", "sub": "Make-up-Schwämmchen", "type": "Eigenmarke", "brand": "ebelin", "name": "Make-up Ei", "qty": "1 St", "match": "gtin", "note": "Product name wording differs between shops; GTIN and DAN identical.", "de": {"name": "Make-up Ei", "price": 2.45, "regular_price": null, "promo": false, "gtin": "4066447860085", "url": "https://www.dm.de/p/d/1365607/ebelin-make-up-ei"}, "at": {"name": "Make-up Schwamm Präzisions Ei sortiert", "price": 2.95, "regular_price": null, "promo": false, "gtin": "4066447860085", "url": "https://www.dm.at/p/d/1365607/ebelin-make-up-schwamm-praezisions-ei-sortiert"}}, {"id": 88, "cat": "Make-Up", "sub": "Augen-Make-up-Entferner", "type": "Eigenmarke", "brand": "Balea", "name": "Augen Make-up Entferner ölfrei", "qty": "100 ml", "match": "gtin", "note": "", "de": {"name": "Augen Make-up Entferner ölfrei", "price": 0.95, "regular_price": null, "promo": false, "gtin": "4066447988260", "url": "https://www.dm.de/p/d/1622359/balea-augen-make-up-entferner-oelfrei"}, "at": {"name": "Augen Make-up Entferner ölfrei", "price": 1.45, "regular_price": null, "promo": false, "gtin": "4066447988260", "url": "https://www.dm.at/p/d/1622359/balea-augen-make-up-entferner-oelfrei"}}, {"id": 89, "cat": "Make-Up", "sub": "Nagellackentferner", "type": "Eigenmarke", "brand": "ebelin", "name": "Nagellackentferner acetonfrei", "qty": "125 ml", "match": "gtin", "note": "Product name wording differs between shops (AT adds 'Professional Peach Duft'); GTIN and DAN identical.", "de": {"name": "Nagellackentferner acetonfrei", "price": 1.25, "regular_price": null, "promo": false, "gtin": "4070765020434", "url": "https://www.dm.de/p/d/1630230/ebelin-nagellackentferner-acetonfrei"}, "at": {"name": "Nagellackentferner Professional Peach Duft Acetonfrei", "price": 1.25, "regular_price": null, "promo": false, "gtin": "4070765020434", "url": "https://www.dm.at/p/d/1630230/ebelin-nagellackentferner-professional-peach-duft-acetonfrei"}}, {"id": 90, "cat": "Make-Up", "sub": "Nagellackentferner", "type": "Marke", "brand": "essie", "name": "Nagellackentferner Good As Gone", "qty": "125 ml", "match": "gtin", "note": "", "de": {"name": "Nagellackentferner Good As Gone", "price": 7.95, "regular_price": null, "promo": false, "gtin": "3600530687398", "url": "https://www.dm.de/p/d/1455372/essie-nagellackentferner-good-as-gone"}, "at": {"name": "Nagellackentferner Good As Gone", "price": 7.95, "regular_price": null, "promo": false, "gtin": "3600530687398", "url": "https://www.dm.at/p/d/1455372/essie-nagellackentferner-good-as-gone"}}, {"id": 91, "cat": "Make-Up", "sub": "Mascara", "type": "Marke", "brand": "Maybelline New York", "name": "Mascara Lash Sensational Sky High Very Black", "qty": "7,2 ml", "match": "gtin", "note": "", "de": {"name": "Mascara Lash Sensational Sky High Very Black", "price": 10.95, "regular_price": null, "promo": false, "gtin": "30166967", "url": "https://www.dm.de/p/d/1572018/maybelline-new-york-mascara-lash-sensational-sky-high-very-black"}, "at": {"name": "Mascara Lash Sensational Sky High Schwarz", "price": 11.95, "regular_price": null, "promo": false, "gtin": "30166967", "url": "https://www.dm.at/p/d/1572018/maybelline-new-york-mascara-lash-sensational-sky-high-schwarz"}}, {"id": 92, "cat": "Make-Up", "sub": "Foundation", "type": "Marke", "brand": "Maybelline New York", "name": "Foundation Fit Me Matte & Poreless 120 Classic Ivory", "qty": "30 ml", "match": "gtin", "note": "Large price gap; DE tile shows no strike-through/promo marker (all Fit Me foundation shades 6,95 € on dm.de).", "de": {"name": "Foundation Fit Me Matte & Poreless 120 Classic Ivory", "price": 6.95, "regular_price": null, "promo": false, "gtin": "3600531324520", "url": "https://www.dm.de/p/d/1471941/maybelline-new-york-foundation-fit-me-matte-und-poreless-120-classic-ivory"}, "at": {"name": "Foundation Fit Me Matte + Poreless 120 Classic Ivory", "price": 10.95, "regular_price": null, "promo": false, "gtin": "3600531324520", "url": "https://www.dm.at/p/d/1471941/maybelline-new-york-foundation-fit-me-matte-poreless-120-classic-ivory"}}, {"id": 93, "cat": "Make-Up", "sub": "Concealer", "type": "Marke", "brand": "essence", "name": "Concealer Camouflage + Matte 100", "qty": "8 ml", "match": "gtin", "note": "", "de": {"name": "Concealer Camouflage + Matte 100", "price": 2.95, "regular_price": null, "promo": false, "gtin": "4059729518224", "url": "https://www.dm.de/p/d/3088136/essence-concealer-camouflage-matte-100"}, "at": {"name": "Concealer Camouflage + Matte 100", "price": 2.95, "regular_price": null, "promo": false, "gtin": "4059729518224", "url": "https://www.dm.at/p/d/3088136/essence-concealer-camouflage-matte-100"}}, {"id": 94, "cat": "Make-Up", "sub": "Lippenstift", "type": "Marke", "brand": "Maybelline New York", "name": "Lippenstift Super Stay Matte Ink 20 Pioneer", "qty": "5 ml", "match": "gtin", "note": "", "de": {"name": "Lippenstift Super Stay Matte Ink 20 Pioneer", "price": 9.95, "regular_price": null, "promo": false, "gtin": "3600531411114", "url": "https://www.dm.de/p/d/1527472/maybelline-new-york-lippenstift-super-stay-matte-ink-20-pioneer"}, "at": {"name": "Lippenstift Super Stay Matte Ink 20 Pioneer", "price": 9.95, "regular_price": null, "promo": false, "gtin": "3600531411114", "url": "https://www.dm.at/p/d/1527472/maybelline-new-york-lippenstift-super-stay-matte-ink-20-pioneer"}}, {"id": 95, "cat": "Make-Up", "sub": "Augen-Make-up-Entferner", "type": "Marke", "brand": "Garnier Skin Naturals", "name": "Augen Make-up Entferner 2in1, Waterproof", "qty": "125 ml", "match": "gtin", "note": "Large price gap; neither tile shows a promo marker.", "de": {"name": "Augen Make-up Entferner 2in1, Waterproof", "price": 3.25, "regular_price": null, "promo": false, "gtin": "3600541698475", "url": "https://www.dm.de/p/d/1431622/garnier-skin-naturals-augen-make-up-entferner-2in1-waterproof"}, "at": {"name": "Augen Make-Up Entferner 2in1", "price": 5.95, "regular_price": null, "promo": false, "gtin": "3600541698475", "url": "https://www.dm.at/p/d/1431622/garnier-skin-naturals-augen-make-up-entferner-2in1"}}, {"id": 96, "cat": "Make-Up", "sub": "Nagellack", "type": "Marke", "brand": "essie", "name": "Nagellack 06 Ballet Slippers Rosé", "qty": "13,5 ml", "match": "gtin", "note": "", "de": {"name": "Nagellack 06 Ballet Slippers Rosé", "price": 8.45, "regular_price": null, "promo": false, "gtin": "30095083", "url": "https://www.dm.de/p/d/1338255/essie-nagellack-06-ballet-slippers-rose"}, "at": {"name": "Nagellack 06 Ballet Slippers", "price": 9.95, "regular_price": null, "promo": false, "gtin": "30095083", "url": "https://www.dm.at/p/d/1338255/essie-nagellack-06-ballet-slippers"}}, {"id": 97, "cat": "Make-Up", "sub": "Kajal", "type": "Marke", "brand": "Catrice", "name": "Kohl Kajal Waterproof 010 Check Chic Black", "qty": "0,78 g", "match": "gtin", "note": "", "de": {"name": "Kohl Kajal Waterproof 010 Check Chic Black", "price": 1.95, "regular_price": null, "promo": false, "gtin": "4059729356239", "url": "https://www.dm.de/p/d/1671377/catrice-kohl-kajal-waterproof-010-check-chic-black"}, "at": {"name": "Kohlkajal Waterproof 010 Check Chic Black", "price": 1.95, "regular_price": null, "promo": false, "gtin": "4059729356239", "url": "https://www.dm.at/p/d/1671377/catrice-kohlkajal-waterproof-010-check-chic-black"}}, {"id": 98, "cat": "Make-Up", "sub": "Puder", "type": "Marke", "brand": "L'Oréal Paris", "name": "Kompakt Puder True Match 2N", "qty": "9 g", "match": "gtin", "note": "Large price gap; neither tile shows a promo marker.", "de": {"name": "Kompakt Puder True Match 2N", "price": 9.95, "regular_price": null, "promo": false, "gtin": "3600523155200", "url": "https://www.dm.de/p/d/2119975/l-oreal-paris-kompakt-puder-true-match-2n"}, "at": {"name": "Kompakt Puder True Match 2N", "price": 14.95, "regular_price": null, "promo": false, "gtin": "3600523155200", "url": "https://www.dm.at/p/d/2119975/l-oreal-paris-kompakt-puder-true-match-2n"}}, {"id": 99, "cat": "Make-Up", "sub": "Augenbrauenstift", "type": "Marke", "brand": "essence", "name": "Augenbrauenstift Designer 10 Dark Chocolate Brown", "qty": "1 g", "match": "gtin", "note": "", "de": {"name": "Augenbrauenstift Designer 10 Dark Chocolate Brown", "price": 1.75, "regular_price": null, "promo": false, "gtin": "4059729228284", "url": "https://www.dm.de/p/d/1593456/essence-augenbrauenstift-designer-10-dark-chocolate-brown"}, "at": {"name": "Augenbrauenstift Eyebrow Designer 10 Dark Chocolate Brown", "price": 1.75, "regular_price": null, "promo": false, "gtin": "4059729228284", "url": "https://www.dm.at/p/d/1593456/essence-augenbrauenstift-eyebrow-designer-10-dark-chocolate-brown"}}, {"id": 100, "cat": "Make-Up", "sub": "Make-up-Schwämmchen", "type": "Marke", "brand": "Real Techniques", "name": "Make-up Schwamm Miracle Complexion", "qty": "1 St", "match": "gtin", "note": "", "de": {"name": "Make-up Schwamm Miracle Complexion", "price": 7.95, "regular_price": null, "promo": false, "gtin": "79625915662", "url": "https://www.dm.de/p/d/1448192/real-techniques-make-up-schwamm-miracle-complexion"}, "at": {"name": "Make-up Schwamm Miracle Complexion", "price": 8.95, "regular_price": null, "promo": false, "gtin": "79625915662", "url": "https://www.dm.at/p/d/1448192/real-techniques-make-up-schwamm-miracle-complexion"}}];
+const META = {"date": "17. November 2026", "stats": {"all_n": 124, "all_avg": 21.2, "all_avg_marke": 19.3, "all_avg_eigen": 23.1}};
+
+const CATS = ["Reinigungsmittel", "Hygieneprodukte", "Kosmetik", "Make-Up"];
+const SCOPES = [["all", "Allgemein"], ["Marke", "Marken-Produkte"], ["Eigenmarke", "Eigenmarken"]];
+const state = { scope: "all", cat: "all", q: "", vat: "brutto", metric: "avg", sort: { key: "pct", dir: -1 }, hl: null };
+
+const eur = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
+const nf1 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const sgnPct = v => (v > 0.049 ? "+" : v < -0.049 ? "−" : "±") + nf1.format(Math.abs(v)) + " %";
+const sgnEur = v => (v > 0.004 ? "+" : v < -0.004 ? "−" : "±") + eur.format(Math.abs(v));
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v; else if (k === "style") e.setAttribute("style", v);
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return e;
+};
+const svgEl = (tag, attrs = {}) => {
+  const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  return e;
+};
+
+// VAT: standard 19 % (DE) / 20 % (AT). Period products: Binden/Tampons 7 % (DE), Slipeinlagen 19 % (DE); AT 0 % for all since 2024.
+function vat(r) {
+  const s = (r.sub + " " + r.name).toLowerCase();
+  if (/slipeinlage/.test(s)) return { de: 0.19, at: 0 };
+  if (/binde|tampon|menstru/.test(s)) return { de: 0.07, at: 0 };
+  return { de: 0.19, at: 0.20 };
+}
+const price = (r, c) => state.vat === "netto" ? r[c].price / (1 + vat(r)[c]) : r[c].price;
+const pct = r => (price(r, "at") / price(r, "de") - 1) * 100;
+const dirOf = v => (v > 0.049 ? "up" : v < -0.049 ? "down" : "same");
+const colorOf = v => `var(--${dirOf(v)})`;
+
+function rowsFor(scope, cat, q = "") {
+  const qq = q.trim().toLowerCase();
+  return DATA.filter(r => (scope === "all" || r.type === scope) && (cat === "all" || r.cat === cat) &&
+    (!qq || (r.brand + " " + r.name + " " + r.sub).toLowerCase().includes(qq)));
+}
+function agg(rows) {
+  const n = rows.length;
+  if (!n) return { n: 0 };
+  const de = rows.reduce((s, r) => s + price(r, "de"), 0), at = rows.reduce((s, r) => s + price(r, "at"), 0);
+  const ps = rows.map(pct).sort((a, b) => a - b);
+  const median = n % 2 ? ps[(n - 1) / 2] : (ps[n / 2 - 1] + ps[n / 2]) / 2;
+  const cnt = { up: 0, same: 0, down: 0 };
+  ps.forEach(p => cnt[dirOf(p)]++);
+  return { n, de, at, basket: (at / de - 1) * 100, avg: ps.reduce((s, p) => s + p, 0) / n, median, cnt };
+}
+const displayName = r => r.name;
+
+/* ---------- header copy ---------- */
+function renderHeader() {
+  const all = agg(rowsFor("all", "all")), m = agg(rowsFor("Marke", "all")), e = agg(rowsFor("Eigenmarke", "all"));
+  const word = v => v >= 0 ? "mehr" : "weniger";
+  if (!all.n || !m.n || !e.n) { document.getElementById("finding").textContent = "Daten unvollständig."; return; }
+  const f = document.getElementById("finding");
+  f.replaceChildren(
+    "Ein identisches Produkt kostet bei dm Österreich im Schnitt ",
+    el("b", {}, nf1.format(Math.abs(all.avg)) + " % " + word(all.avg)), " als bei dm Deutschland. Bei Marken-Produkten sind es ",
+    el("b", {}, sgnPct(m.avg)), ", bei den dm-Eigenmarken ", el("b", {}, sgnPct(e.avg)), "."
+  );
+  document.getElementById("lede").textContent =
+    `${all.n} Produkte (${m.n} Marken-Produkte, ${e.n} Eigenmarken), die es in beiden Onlineshops in gleicher Ausführung und Menge gibt. ` +
+    `Der gesamte Warenkorb kostet in Deutschland ${eur.format(all.de)} und in Österreich ${eur.format(all.at)} (${sgnPct(all.basket)}). ` +
+    `${all.cnt.up} Produkte sind in Österreich teurer, ${all.cnt.same} gleich teuer, ${all.cnt.down} günstiger. Preisstand: ${META.date || ""}.`;
+}
+
+/* ---------- matrix ---------- */
+function renderMatrix() {
+  const t = document.getElementById("matrix");
+  const cells = [];
+  const rowsDef = [["all", "Alle Kategorien"], ...CATS.map(c => [c, c])];
+  let max = 0;
+  for (const [c] of rowsDef) for (const [s] of SCOPES) {
+    const a = agg(rowsFor(s, c));
+    if (a.n) max = Math.max(max, Math.abs(a[state.metric]));
+  }
+  max = Math.max(5, Math.ceil(max / 5) * 5);
+  document.getElementById("scale-max").textContent = `Farbskala bis ±${max} %`;
+  const head = el("thead", {}, el("tr", {}, el("th", {}, ""), ...SCOPES.map(([, l]) => el("th", { scope: "col" }, l))));
+  const body = el("tbody");
+  for (const [c, label] of rowsDef) {
+    const tr = el("tr", {}, el("th", { scope: "row" }, label));
+    for (const [s, sl] of SCOPES) {
+      const a = agg(rowsFor(s, c));
+      const v = a.n ? a[state.metric] : 0;
+      const k = Math.min(1, Math.abs(v) / max);
+      const pole = v >= 0 ? "--up" : "--down";
+      const btn = el("button", {
+        type: "button", class: "cell" + (c === "all" ? " total" : "") + (state.scope === s && state.cat === c ? " on" : ""),
+        "aria-pressed": String(state.scope === s && state.cat === c),
+        "aria-label": `${sl}, ${label}: ${a.n ? sgnPct(v) : "keine Daten"}, ${a.n} Produkte`,
+        style: `background: color-mix(in oklab, var(${pole}) ${Math.round(k * 88)}%, var(--mid)); color: ${k > 0.55 ? "#fff" : "var(--ink)"}`,
+        onclick: () => { state.scope = s; state.cat = c; renderAll(); document.getElementById("controls").scrollIntoView({ behavior: "smooth", block: "start" }); }
+      }, el("span", { class: "v" }, a.n ? sgnPct(v) : "–"), el("span", { class: "n" }, a.n ? `${a.n} Produkte` : ""));
+      btn.addEventListener("pointermove", ev => showTip(ev, matrixTip(a, sl, label)));
+      btn.addEventListener("pointerleave", hideTip);
+      tr.append(el("td", {}, btn));
+    }
+    body.append(tr);
+  }
+  t.replaceChildren(head, body);
+  document.getElementById("matrix-sub").textContent = state.metric === "avg"
+    ? "Durchschnittlicher Preisunterschied je Produkt, Österreich gegenüber Deutschland. Klick auf ein Feld filtert den ganzen Bericht."
+    : "Preisunterschied des Warenkorbs (Summe aller Einzelpreise), Österreich gegenüber Deutschland. Klick auf ein Feld filtert den ganzen Bericht.";
+}
+function matrixTip(a, sl, label) {
+  if (!a.n) return [el("div", { class: "t-n" }, "Keine Daten")];
+  return [
+    el("div", { class: "t-v" }, sgnPct(a[state.metric])),
+    el("div", { class: "t-n" }, `${sl} · ${label}`),
+    el("div", { class: "t-row" }, el("span", {}, "Warenkorb DE"), el("span", {}, eur.format(a.de))),
+    el("div", { class: "t-row" }, el("span", {}, "Warenkorb AT"), el("span", {}, eur.format(a.at))),
+    el("div", { class: "t-row" }, el("span", {}, "Ø je Produkt / Median"), el("span", {}, `${sgnPct(a.avg)} / ${sgnPct(a.median)}`)),
+    el("div", { class: "t-s", style: "margin-top:6px" }, `${a.cnt.up} teurer · ${a.cnt.same} gleich · ${a.cnt.down} günstiger in AT`)
+  ];
+}
+
+/* ---------- KPIs ---------- */
+function renderKpis(rows) {
+  const a = agg(rows);
+  const scopeLabel = SCOPES.find(s => s[0] === state.scope)[1];
+  document.getElementById("scope-title").textContent = `${scopeLabel} · ${state.cat === "all" ? "alle Kategorien" : state.cat}`;
+  document.getElementById("scope-note").textContent = (state.vat === "netto" ? "Nettopreise (ohne MwSt.)" : "Endpreise inkl. MwSt.") + (state.q ? ` · Suche „${state.q}“` : "");
+  const box = document.getElementById("kpis");
+  if (!a.n) { box.replaceChildren(el("div", { class: "card empty" }, "Keine Produkte für diese Auswahl. Suche oder Filter zurücksetzen.")); return; }
+  const kpi = (label, value, sub, extra) => el("div", { class: "card kpi" }, el("span", { class: "label" }, label), el("span", { class: "value" }, value), sub ? el("span", { class: "sub" }, sub) : null, extra || null);
+  const tot = a.n;
+  const split = el("div", { class: "split", role: "img", "aria-label": `${a.cnt.up} teurer, ${a.cnt.same} gleich, ${a.cnt.down} günstiger in Österreich` },
+    ...[["up", a.cnt.up], ["same", a.cnt.same], ["down", a.cnt.down]].filter(([, v]) => v > 0).map(([k, v]) => el("span", { style: `width:${v / tot * 100}%;background:var(--${k})` })));
+  const lg = el("div", { class: "legend", style: "margin-top:8px" },
+    el("span", {}, el("i", { class: "sw", style: "background:var(--up)" }), `${a.cnt.up} teurer`),
+    el("span", {}, el("i", { class: "sw", style: "background:var(--same)" }), `${a.cnt.same} gleich`),
+    el("span", {}, el("i", { class: "sw", style: "background:var(--down)" }), `${a.cnt.down} günstiger`));
+  box.replaceChildren(
+    kpi("Ø Preisunterschied je Produkt", sgnPct(a.avg), `Median ${sgnPct(a.median)} · ${a.n} Produkte`),
+    kpi("Warenkorb Deutschland", eur.format(a.de), `${a.n} Produkte, je 1 Stück`),
+    kpi("Warenkorb Österreich", eur.format(a.at), `${sgnEur(a.at - a.de)} (${sgnPct(a.basket)})`),
+    kpi("Produkte in Österreich teurer", `${a.cnt.up} von ${tot}`, null, el("div", {}, split, lg))
+  );
+}
+
+/* ---------- dot plot ---------- */
+function renderPlot(rows) {
+  const svg = document.getElementById("plot");
+  const W = Math.max(320, document.getElementById("plot-box").clientWidth);
+  const narrow = W < 560;
+  const groupKey = state.cat === "all" ? "cat" : "sub";
+  const groups = state.cat === "all" ? CATS.filter(c => rows.some(r => r.cat === c)) : [...new Set(rows.map(r => r.sub))].sort((a, b) => a.localeCompare(b, "de"));
+  const leftW = narrow ? 0 : 150, padR = 18, top = 26, R = 5.5;
+  const vals = rows.map(pct);
+  const vMin = Math.min(0, ...vals), vMax = Math.max(0, ...vals);
+  const span = vMax - vMin;
+  const stepT = span > 220 ? 25 : span > 70 ? 10 : 5;
+  const lo = Math.min(-stepT, Math.floor(vMin / stepT) * stepT), hi = Math.max(stepT, Math.ceil(vMax / stepT) * stepT);
+  const x0 = leftW + 8, x1 = W - padR;
+  const X = v => x0 + (v - lo) / (hi - lo) * (x1 - x0);
+  svg.replaceChildren();
+  // layout rows with a simple beeswarm
+  let y = top;
+  const placed = [];
+  const rowGeo = [];
+  for (const g of groups) {
+    const rs = rows.filter(r => r[groupKey] === g).map(r => ({ r, x: X(pct(r)) })).sort((a, b) => a.x - b.x);
+    const pts = [];
+    for (const p of rs) {
+      let off = 0, k = 0;
+      while (pts.some(q => Math.abs(q.x - p.x) < 2 * R + 2 && Math.abs(q.off - off) < 2 * R + 2)) { k++; off = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (2 * R + 2); }
+      pts.push({ ...p, off });
+    }
+    const minOff = Math.min(0, ...pts.map(p => p.off)), maxOff = Math.max(0, ...pts.map(p => p.off));
+    const labelH = narrow ? 18 : 0;
+    const h = Math.max(34, maxOff - minOff + 2 * R + 14) + labelH;
+    const cy = y + labelH + (h - labelH) / 2 - (maxOff + minOff) / 2;
+    rowGeo.push({ g, y, h, cy, labelH, n: rs.length });
+    pts.forEach(p => placed.push({ ...p, y: cy + p.off }));
+    y += h;
+  }
+  const H = y + 30;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("height", H);
+  // grid & ticks
+  const every = Math.max(1, Math.ceil(((hi - lo) / stepT) / Math.max(4, Math.floor((x1 - x0) / 56))));
+  for (let v = lo; v <= hi; v += stepT) {
+    const gx = X(v);
+    svg.append(svgEl("line", { x1: gx, x2: gx, y1: top - 6, y2: y, stroke: v === 0 ? "var(--muted)" : "var(--grid)", "stroke-width": v === 0 ? 1.25 : 1 }));
+    if (Math.round(v / stepT) % every === 0) {
+      const t = svgEl("text", { x: gx, y: y + 18, "text-anchor": "middle", "font-size": 11, fill: "var(--muted)", "font-variant-numeric": "tabular-nums" });
+      t.textContent = (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v) + " %";
+      svg.append(t);
+    }
+  }
+  const tight = X(0) - x0 < 95;
+  const lt = svgEl("text", tight ? { x: x0, y: 12, "font-size": 11, fill: "var(--ink-2)" } : { x: X(0) - 6, y: 12, "font-size": 11, fill: "var(--ink-2)", "text-anchor": "end" });
+  lt.textContent = "← AT günstiger"; svg.append(lt);
+  const rt = svgEl("text", tight ? { x: x1, y: 12, "font-size": 11, fill: "var(--ink-2)", "text-anchor": "end" } : { x: X(0) + 6, y: 12, "font-size": 11, fill: "var(--ink-2)" });
+  rt.textContent = "AT teurer →"; svg.append(rt);
+  rowGeo.forEach((g, i) => {
+    if (i > 0) svg.append(svgEl("line", { x1: narrow ? 0 : 0, x2: W - padR, y1: g.y, y2: g.y, stroke: "var(--line)", "stroke-width": 1 }));
+    const lab = svgEl("text", narrow ? { x: 0, y: g.y + 14, "font-size": 12, fill: "var(--ink)", "font-weight": 600 } : { x: 0, y: g.cy + 4, "font-size": 12.5, fill: "var(--ink)", "font-weight": 600 });
+    lab.textContent = g.g + (narrow ? ` (${g.n})` : "");
+    svg.append(lab);
+    if (!narrow) { const nt = svgEl("text", { x: 0, y: g.cy + 19, "font-size": 11, fill: "var(--muted)" }); nt.textContent = g.n === 1 ? "1 Produkt" : `${g.n} Produkte`; svg.append(nt); }
+  });
+  // dots
+  const shapeByType = state.scope === "all";
+  for (const p of placed) {
+    const v = pct(p.r);
+    const gEl = svgEl("g", { class: "dot", tabindex: 0, role: "button", "data-id": p.r.id,
+      "aria-label": `${p.r.brand} ${displayName(p.r)}: ${sgnPct(v)}, DE ${eur.format(price(p.r, "de"))}, AT ${eur.format(price(p.r, "at"))}` });
+    gEl.append(svgEl("circle", { cx: p.x, cy: p.y, r: 12, fill: "transparent" }));
+    const isSq = shapeByType && p.r.type === "Eigenmarke";
+    const mark = isSq
+      ? svgEl("rect", { class: "mark", x: p.x - R, y: p.y - R, width: 2 * R, height: 2 * R, rx: 1.5, fill: colorOf(v), stroke: "var(--surface)", "stroke-width": 2 })
+      : svgEl("circle", { class: "mark", cx: p.x, cy: p.y, r: R, fill: colorOf(v), stroke: "var(--surface)", "stroke-width": 2 });
+    gEl.append(mark);
+    if (state.hl === p.r.id) gEl.classList.add("hl");
+    const tip = () => productTip(p.r);
+    gEl.addEventListener("pointermove", ev => showTip(ev, tip()));
+    gEl.addEventListener("pointerleave", hideTip);
+    gEl.addEventListener("focus", () => { const b = gEl.getBoundingClientRect(); showTip({ clientX: b.right, clientY: b.top }, tip()); });
+    gEl.addEventListener("blur", hideTip);
+    const go = () => jumpTo(p.r.id);
+    gEl.addEventListener("click", go);
+    gEl.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); } });
+    svg.append(gEl);
+  }
+  const lg = document.getElementById("plot-legend");
+  lg.replaceChildren(...[
+    el("span", {}, el("i", { class: "sw", style: "background:var(--up)" }), "AT teurer"),
+    el("span", {}, el("i", { class: "sw", style: "background:var(--same)" }), "gleich"),
+    el("span", {}, el("i", { class: "sw", style: "background:var(--down)" }), "AT günstiger"),
+    shapeByType ? el("span", {}, el("i", { class: "sw ring" }), "Marke") : null,
+    shapeByType ? el("span", {}, el("i", { class: "sw sq ring" }), "Eigenmarke") : null
+  ].filter(Boolean));
+}
+function productTip(r) {
+  const v = pct(r);
+  const net = state.vat === "netto" ? " (netto)" : "";
+  return [
+    el("div", { class: "t-v" }, sgnPct(v)),
+    el("div", { class: "t-n" }, `${r.brand} ${displayName(r)}`),
+    el("div", { class: "t-s" }, `${r.qty} · ${r.sub} · ${r.type}`),
+    el("div", { class: "t-row" }, el("span", {}, "dm.de" + net), el("span", {}, eur.format(price(r, "de")))),
+    el("div", { class: "t-row" }, el("span", {}, "dm.at" + net), el("span", {}, eur.format(price(r, "at")))),
+    el("div", { class: "t-row" }, el("span", {}, "Differenz"), el("span", {}, sgnEur(price(r, "at") - price(r, "de"))))
+  ];
+}
+
+/* ---------- extremes ---------- */
+function renderExtremes(rows) {
+  const sorted = [...rows].sort((a, b) => pct(b) - pct(a));
+  const ups = sorted.filter(r => pct(r) > 0.049).slice(0, 6);
+  const downs = sorted.filter(r => pct(r) < -0.049).reverse().slice(0, 6);
+  const maxAbs = Math.max(1, ...rows.map(r => Math.abs(pct(r))));
+  const item = r => {
+    const v = pct(r);
+    return el("li", { onclick: () => jumpTo(r.id), tabindex: 0, onkeydown: ev => { if (ev.key === "Enter") jumpTo(r.id); } },
+      el("span", { class: "pn" }, el("b", {}, r.brand), " ", displayName(r)),
+      el("span", { class: "pv" }, sgnPct(v)),
+      el("span", { class: "pb", "aria-hidden": "true" }, el("i", { style: `width:${Math.abs(v) / maxAbs * 100}%;background:${colorOf(v)}` })),
+      el("span", { class: "pp" }, `DE ${eur.format(price(r, "de"))} → AT ${eur.format(price(r, "at"))} · ${r.qty}`));
+  };
+  const fill = (id, list, emptyText) => document.getElementById(id).replaceChildren(...(list.length ? list.map(item) : [el("li", { class: "muted small", style: "cursor:default" }, emptyText)]));
+  fill("ext-up", ups, "Kein Produkt dieser Auswahl ist in Österreich teurer.");
+  fill("ext-down", downs, "Kein Produkt dieser Auswahl ist in Österreich günstiger.");
+}
+
+/* ---------- table ---------- */
+const COLS = [
+  { key: "name", label: "Produkt", get: r => (r.brand + " " + r.name).toLowerCase() },
+  { key: "cat", label: "Kategorie", get: r => r.cat + r.sub },
+  { key: "type", label: "Sortiment", get: r => r.type },
+  { key: "de", label: "dm.de", r: true, get: r => price(r, "de") },
+  { key: "at", label: "dm.at", r: true, get: r => price(r, "at") },
+  { key: "abs", label: "Diff. €", r: true, get: r => price(r, "at") - price(r, "de") },
+  { key: "pct", label: "Diff. %", r: true, get: r => pct(r) },
+  { key: "match", label: "Abgleich", get: r => r.match },
+  { key: "links", label: "Shops", sortable: false }
+];
+function renderTable(rows) {
+  const t = document.getElementById("tbl");
+  const col = COLS.find(c => c.key === state.sort.key);
+  const sorted = [...rows].sort((a, b) => { const x = col.get(a), y = col.get(b); return (x < y ? -1 : x > y ? 1 : 0) * state.sort.dir; });
+  const head = el("tr", {}, ...COLS.map(c => {
+    const on = state.sort.key === c.key;
+    const th = el("th", { class: c.r ? "r" : "", scope: "col", "aria-sort": on ? (state.sort.dir > 0 ? "ascending" : "descending") : "none" });
+    if (c.sortable === false) th.append(c.label);
+    else th.append(el("button", { type: "button", onclick: () => { state.sort = { key: c.key, dir: on ? -state.sort.dir : (c.r ? -1 : 1) }; renderTable(currentRows()); } },
+      c.label, el("span", { "aria-hidden": "true", class: "muted" }, on ? (state.sort.dir > 0 ? "▲" : "▼") : "")));
+    return th;
+  }));
+  const body = el("tbody");
+  for (const r of sorted) {
+    const v = pct(r);
+    body.append(el("tr", { id: "row-" + r.id, class: state.hl === r.id ? "hl" : "" },
+      el("td", {}, el("span", { class: "b" }, r.brand), " ", displayName(r), el("div", { class: "muted small" }, r.qty + (r.note ? " · " + r.note : ""))),
+      el("td", {}, r.cat, el("div", { class: "muted small" }, r.sub)),
+      el("td", {}, el("span", { class: "pill" }, r.type)),
+      el("td", { class: "r num" }, eur.format(price(r, "de")), r.de.promo ? el("div", { class: "muted small" }, "Aktion") : null),
+      el("td", { class: "r num" }, eur.format(price(r, "at")), r.at.promo ? el("div", { class: "muted small" }, "Aktion") : null),
+      el("td", { class: "r num" }, sgnEur(price(r, "at") - price(r, "de"))),
+      el("td", { class: "r" }, el("span", { class: "delta" }, el("i", { style: `background:${colorOf(v)}` }), sgnPct(v))),
+      el("td", {}, el("span", { class: "small", title: r.match === "gtin" ? `EAN ${r.de.gtin}` : `EAN DE ${r.de.gtin} · AT ${r.at.gtin}` }, r.match === "gtin" ? "gleiche EAN" : "Name + Menge")),
+      el("td", { class: "lk" }, el("a", { href: r.de.url, target: "_blank", rel: "noopener" }, "dm.de ↗"), "  ", el("a", { href: r.at.url, target: "_blank", rel: "noopener" }, "dm.at ↗"))
+    ));
+  }
+  if (!sorted.length) body.append(el("tr", {}, el("td", { colspan: COLS.length, class: "empty" }, "Keine Produkte für diese Auswahl.")));
+  t.replaceChildren(el("thead", {}, head), body);
+  document.getElementById("tbl-count").textContent = `${sorted.length} Produkte in der Auswahl.`;
+}
+function jumpTo(id) {
+  state.hl = id;
+  renderTable(currentRows());
+  document.querySelectorAll(".dot").forEach(d => d.classList.toggle("hl", +d.dataset.id === id));
+  const row = document.getElementById("row-" + id);
+  if (row) row.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+/* ---------- tooltip ---------- */
+const tipEl = document.getElementById("tip");
+function showTip(ev, nodes) {
+  tipEl.replaceChildren(...nodes);
+  tipEl.style.display = "block";
+  const w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + w > window.innerWidth - 8) x = ev.clientX - w - 14;
+  if (y + h > window.innerHeight - 8) y = ev.clientY - h - 14;
+  tipEl.style.left = Math.max(8, x) + "px"; tipEl.style.top = Math.max(8, y) + "px";
+}
+function hideTip() { tipEl.style.display = "none"; }
+
+/* ---------- method ---------- */
+function renderMethod() {
+  const nG = DATA.filter(r => r.match === "gtin").length;
+  const st = META.stats || {};
+  const p1 = v => (v > 0 ? "+" : v < 0 ? "−" : "±") + nf1.format(Math.abs(v)) + " %";
+  const block = (title, ...items) => el("div", {}, el("h3", {}, title), el("ul", {}, ...items.filter(Boolean).map(i => el("li", {}, i))));
+  document.getElementById("method").replaceChildren(
+    block("Datengrundlage",
+      `Online-Preise von dm.de und dm.at, abgefragt am ${META.date || ""} über die öffentlichen Suchseiten der beiden Shops, zeitversetzt je Produktkategorie.`,
+      "Erfasst wurden alltägliche Produkte in Standardgröße, je 50 Marken-Produkte und 50 dm-Eigenmarken, verteilt auf vier Produktkategorien.",
+      "Marken- und Eigenmarken-Korb enthalten je Kategorie dieselben Produktarten (z. B. Zahnpasta, Glasreiniger, Mascara), damit beide Körbe direkt vergleichbar sind.",
+      "Verglichen wird der Preis für eine Packung; Grundpreise und Mengenrabatte bleiben außen vor."),
+    block("Identische Produkte",
+      `${nG} von ${DATA.length} Produkten haben in beiden Shops dieselbe EAN, meist auch dieselbe dm-Artikelnummer.`,
+      "Die übrigen tragen in Österreich eine eigene EAN. Sie wurden nur aufgenommen, wenn Marke, Sorte, Farbton und Füllmenge übereinstimmen.",
+      "Sets, Reisegrößen, limitierte Editionen und abweichende Packungsgrößen sind ausgeschlossen. Ausgeschlossen ist auch das Balea Mizellenwasser: gleiche EAN, aber in Österreich als Variante „Rose“ mit Duft verkauft.",
+      st.all_n ? `Gegenprobe: Über alle ${st.all_n} gefundenen identischen Produkte, auch die außerhalb der beiden Körbe, liegt der Aufschlag im Schnitt bei ${p1(st.all_avg)} (Marken ${p1(st.all_avg_marke)}, Eigenmarken ${p1(st.all_avg_eigen)}).` : null),
+    block("Mehrwertsteuer",
+      "Deutschland: 19 % Normalsatz, Österreich: 20 %. Allein dadurch liegt ein österreichischer Endpreis bei gleichem Nettopreis um rund 0,8 % höher.",
+      "Die Ansicht „ohne MwSt.“ rechnet beide Preise netto. Periodenprodukte sind in Österreich steuerfrei (0 %); in Deutschland gelten 7 % für Binden und Tampons und 19 % für Slipeinlagen.",
+      "Prozentwerte beziehen sich immer auf den deutschen Preis: +10 % heißt, das Produkt kostet in Österreich ein Zehntel mehr."),
+    block("Grenzen",
+      "Momentaufnahme eines Tages. Keine der erfassten Produktkacheln zeigte einen Aktions- oder Streichpreis; die größten Abweichungen (u. a. Maybelline Fit Me, NIVEA SUN) sind auf den Produktseiten beider Shops als dm-Dauerpreis ausgewiesen.",
+      "Die Auswahl ist keine repräsentative Stichprobe des gesamten Sortiments, sondern ein Korb häufig gekaufter Artikel.",
+      "Filialpreise können von den Online-Preisen abweichen.")
+  );
+  document.getElementById("foot").textContent = `Stand ${META.date || ""} · Quelle: dm.de und dm.at (Online-Shop-Preise) · Unabhängige eigene Auswertung, keine Veröffentlichung von dm.`;
+}
+
+/* ---------- wiring ---------- */
+const currentRows = () => rowsFor(state.scope, state.cat, state.q);
+function syncSeg(id, val) { document.querySelectorAll(`#${id} button`).forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === val))); }
+function renderAll() {
+  syncSeg("seg-scope", state.scope); syncSeg("seg-cat", state.cat); syncSeg("seg-vat", state.vat); syncSeg("seg-metric", state.metric);
+  const rows = currentRows();
+  renderHeader(); renderMatrix(); renderKpis(rows); renderPlot(rows); renderExtremes(rows); renderTable(rows);
+}
+const bindSeg = (id, key) => document.querySelectorAll(`#${id} button`).forEach(b => b.addEventListener("click", () => { state[key] = b.dataset.v; state.hl = null; renderAll(); }));
+bindSeg("seg-scope", "scope"); bindSeg("seg-cat", "cat"); bindSeg("seg-vat", "vat"); bindSeg("seg-metric", "metric");
+document.getElementById("q").addEventListener("input", e => { state.q = e.target.value; const rows = currentRows(); renderKpis(rows); renderPlot(rows); renderExtremes(rows); renderTable(rows); });
+let rz; new ResizeObserver(() => { clearTimeout(rz); rz = setTimeout(() => renderPlot(currentRows()), 80); }).observe(document.getElementById("plot-box"));
+window.addEventListener("scroll", hideTip, { passive: true });
+renderMethod();
+renderAll();
+</script>
+</body>
+</html>
